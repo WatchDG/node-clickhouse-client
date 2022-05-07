@@ -1,5 +1,5 @@
 {
-  "name": "clickhouse-client",
+  "name": "@watchdg/clickhouse-client",
   "version": "1.0.0",
   "license": "MIT",
   "author": {
