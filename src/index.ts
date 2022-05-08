@@ -88,4 +88,8 @@ export class ClickhouseClient {
             return await body.json();
         }
     }
+
+    async close(): Promise<void> {
+        await this.httpClient.close();
+    }
 }
