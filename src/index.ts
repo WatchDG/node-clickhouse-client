@@ -62,7 +62,7 @@ export class ClickhouseClient {
             path: '/'
         };
         if (request.data) {
-            requestOptions.path = encodeURIComponent(`/?query=${request.query}`);
+            requestOptions.path = `/?query=${encodeURIComponent(request.query)}`;
             requestOptions.body = request.data;
         } else {
             requestOptions.body = request.query;
