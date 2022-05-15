@@ -52,6 +52,23 @@ describe('clickhouse client', function () {
                 expect(result.data).toEqual(expect.arrayContaining([['1', '2', '[3,4]', `['5','6']`]]));
             });
         });
+
+        describe('TabSeparatedRaw', function () {
+            it('select', async function () {
+                const clickhouseClient = new ClickhouseClient();
+                const result = await clickhouseClient.query(`
+                SELECT  1,
+                        '2',
+                        [3, 4],
+                        ['5','6']
+                FORMAT TabSeparatedRaw
+                `);
+                expect(result).toHaveProperty('data');
+                expect(result.rows).toBe(1);
+                expect(result.data).toBeInstanceOf(Array);
+                expect(result.data).toEqual(expect.arrayContaining([['1', '2', '[3,4]', `['5','6']`]]));
+            });
+        });
     });
 
     describe('stream', function () {
@@ -72,6 +89,32 @@ describe('clickhouse client', function () {
                         data.push(...chunk);
                     });
                     stream.on('end', function () {
+                        expect(data.length).toBe(1);
+                        expect(data).toEqual(expect.arrayContaining([['1', '2', '[3,4]', `['5','6']`]]));
+                        done();
+                    });
+                });
+            });
+        });
+
+        describe('TabSeparatedRaw', function () {
+            it('select', function (done) {
+                const clickhouseClient = new ClickhouseClient();
+
+                clickhouseClient.stream(`
+                SELECT  1,
+                        '2',
+                        [3, 4],
+                        ['5','6']
+                FORMAT TabSeparatedRaw
+                `).then(function (stream) {
+                    expect(stream).toBeInstanceOf(Readable);
+                    const data: any[] = [];
+                    stream.on('data', function (chunk) {
+                        data.push(...chunk);
+                    });
+                    stream.on('end', function () {
+                        expect(data.length).toBe(1);
                         expect(data).toEqual(expect.arrayContaining([['1', '2', '[3,4]', `['5','6']`]]));
                         done();
                     });

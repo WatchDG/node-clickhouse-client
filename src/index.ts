@@ -92,7 +92,7 @@ export class ClickhouseClient {
         if (clickhouseFormat === 'JSON') {
             return await body.json();
         }
-        if (clickhouseFormat === 'TabSeparated') {
+        if (clickhouseFormat === 'TabSeparated' || clickhouseFormat === 'TabSeparatedRaw') {
             return await new Promise((resolve, reject) => {
                 let data: any = [];
                 const tsvStream = new TSVTransform();
@@ -121,7 +121,7 @@ export class ClickhouseClient {
             throw new Error(await body.text());
         }
         const clickhouseFormat = headers['x-clickhouse-format'];
-        if (clickhouseFormat === 'TabSeparated') {
+        if (clickhouseFormat === 'TabSeparated' || clickhouseFormat === 'TabSeparatedRaw') {
             const tsvStream = new TSVTransform();
             return body.pipe(tsvStream);
         }
