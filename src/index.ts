@@ -1,5 +1,7 @@
 import { Client } from "undici";
 
+import { TSVTransform } from "./streams/tsv";
+
 import type { Dispatcher } from 'undici';
 import type { Readable } from "stream";
 
@@ -15,6 +17,8 @@ export interface ClickhouseClientRequest {
     query: string;
     data?: Readable;
 }
+
+export type Request = ClickhouseClientRequest | string;
 
 export class ClickhouseClient {
     private readonly httpClient: Client;
@@ -42,7 +46,7 @@ export class ClickhouseClient {
         return url;
     }
 
-    static prepareRequest(request: ClickhouseClientRequest | string): ClickhouseClientRequest {
+    static prepareRequest(request: Request): ClickhouseClientRequest {
         if (typeof request === "string") {
             return {
                 query: request
@@ -78,15 +82,50 @@ export class ClickhouseClient {
         return statusCode == 200 && (await body.text()) === 'Ok.\n';
     }
 
-    async query(request: ClickhouseClientRequest | string) {
+    async query(request: Request) {
         const _request = ClickhouseClient.prepareRequest(request);
         const { statusCode, headers, body } = await this.request(_request);
         if (statusCode != 200) {
             throw new Error(await body.text());
         }
-        if (headers['x-clickhouse-format'] === 'JSON') {
+        const clickhouseFormat = headers['x-clickhouse-format'];
+        if (clickhouseFormat === 'JSON') {
             return await body.json();
         }
+        if (clickhouseFormat === 'TabSeparated') {
+            return await new Promise((resolve, reject) => {
+                let data: any = [];
+                const tsvStream = new TSVTransform();
+                let stream = body.pipe(tsvStream);
+                stream.on('data', function (chunk) {
+                    data.push(...chunk);
+                });
+                stream.on('error', function (reason) {
+                    reject(reason);
+                });
+                stream.on('end', function () {
+                    resolve({
+                        data,
+                        rows: data.length
+                    });
+                });
+            });
+        }
+        throw new Error(`Unsupported clickhouse format: ${clickhouseFormat}`);
+    }
+
+    async stream(request: Request): Promise<Readable> {
+        const _request = ClickhouseClient.prepareRequest(request);
+        const { statusCode, headers, body } = await this.request(_request);
+        if (statusCode != 200) {
+            throw new Error(await body.text());
+        }
+        const clickhouseFormat = headers['x-clickhouse-format'];
+        if (clickhouseFormat === 'TabSeparated') {
+            const tsvStream = new TSVTransform();
+            return body.pipe(tsvStream);
+        }
+        throw new Error(`Unsupported clickhouse format: ${clickhouseFormat}`);
     }
 
     async close(): Promise<void> {

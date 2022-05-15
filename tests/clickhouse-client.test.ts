@@ -1,4 +1,5 @@
 import { ClickhouseClient } from "../src";
+import { Readable } from "stream";
 
 describe('clickhouse client', function () {
     it('init', function () {
@@ -12,12 +13,70 @@ describe('clickhouse client', function () {
         expect(result).toBe(true);
     });
 
-    it('select 1', async function () {
-        const clickhouseClient = new ClickhouseClient();
-        const result = await clickhouseClient.query('SELECT 1 AS value format JSON');
-        expect(result).toHaveProperty('data');
-        expect(result.rows).toBe(1);
-        expect(result.data).toBeInstanceOf(Array);
-        expect(result.data).toEqual(expect.arrayContaining([{ value: 1 }]));
+    describe('query', function () {
+        describe('JSON', function () {
+            it('select', async function () {
+                const clickhouseClient = new ClickhouseClient();
+                const result = await clickhouseClient.query(`
+                SELECT  1           AS num,
+                        '2'         AS str,
+                        [3, 4]      AS numArr,
+                        ['5', '6']  AS strArr
+                FORMAT JSON
+                `);
+                expect(result).toHaveProperty('data');
+                expect(result.rows).toBe(1);
+                expect(result.data).toBeInstanceOf(Array);
+                expect(result.data).toEqual(expect.arrayContaining([{
+                    num: 1,
+                    str: '2',
+                    numArr: [3, 4],
+                    strArr: ['5', '6']
+                }]));
+            });
+        });
+
+        describe('TabSeparated', function () {
+            it('select', async function () {
+                const clickhouseClient = new ClickhouseClient();
+                const result = await clickhouseClient.query(`
+                SELECT  1,
+                        '2',
+                        [3, 4],
+                        ['5','6']
+                FORMAT TabSeparated
+                `);
+                expect(result).toHaveProperty('data');
+                expect(result.rows).toBe(1);
+                expect(result.data).toBeInstanceOf(Array);
+                expect(result.data).toEqual(expect.arrayContaining([['1', '2', '[3,4]', `['5','6']`]]));
+            });
+        });
+    });
+
+    describe('stream', function () {
+        describe('TabSeparated', function () {
+            it('select', function (done) {
+                const clickhouseClient = new ClickhouseClient();
+
+                clickhouseClient.stream(`
+                SELECT  1,
+                        '2',
+                        [3, 4],
+                        ['5','6']
+                FORMAT TabSeparated
+                `).then(function (stream) {
+                    expect(stream).toBeInstanceOf(Readable);
+                    const data: any[] = [];
+                    stream.on('data', function (chunk) {
+                        data.push(...chunk);
+                    });
+                    stream.on('end', function () {
+                        expect(data).toEqual(expect.arrayContaining([['1', '2', '[3,4]', `['5','6']`]]));
+                        done();
+                    });
+                });
+            });
+        });
     });
 });
