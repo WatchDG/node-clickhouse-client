@@ -83,7 +83,12 @@ describe('clickhouse client', function () {
                 expect(result).toHaveProperty('data');
                 expect(result.rows).toBe(1);
                 expect(result.data).toBeInstanceOf(Array);
-                expect(result.data).toEqual(expect.arrayContaining([['1', '2', '[3,4]', `['5','6']`]]));
+                expect(result.data).toEqual(expect.arrayContaining([{
+                    'v1': '1',
+                    'v2': '2',
+                    'v3': '[3,4]',
+                    'v4': `['5','6']`
+                }]));
                 expect(result).toHaveProperty('meta');
                 expect(result.meta).toBeInstanceOf(Object);
                 expect(result.meta).toHaveProperty('names');
@@ -98,17 +103,24 @@ describe('clickhouse client', function () {
                 SELECT  1 AS v1,
                         '2' AS v2,
                         [3, 4] AS v3,
-                        ['5','6'] AS v4
+                        ['5','6'] AS v4,
+                        false AS v5
                 FORMAT TabSeparatedWithNamesAndTypes
                 `);
                 expect(result).toHaveProperty('data');
                 expect(result.rows).toBe(1);
                 expect(result.data).toBeInstanceOf(Array);
-                expect(result.data).toEqual(expect.arrayContaining([['1', '2', '[3,4]', `['5','6']`]]));
+                expect(result.data).toEqual(expect.arrayContaining([{
+                    'v1': 1,
+                    'v2': '2',
+                    'v3': '[3,4]',
+                    'v4': `['5','6']`,
+                    'v5': false
+                }]));
                 expect(result).toHaveProperty('meta');
                 expect(result.meta).toBeInstanceOf(Object);
                 expect(result.meta).toHaveProperty('names');
-                expect(result.meta.names).toEqual(['v1', 'v2', 'v3', 'v4']);
+                expect(result.meta.names).toEqual(['v1', 'v2', 'v3', 'v4', 'v5']);
                 expect(result.meta).toHaveProperty('types');
                 console.log(result.meta);
             });

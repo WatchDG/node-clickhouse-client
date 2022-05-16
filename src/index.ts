@@ -92,7 +92,10 @@ export class ClickhouseClient {
         if (clickhouseFormat === 'JSON') {
             return await body.json();
         }
-        if (clickhouseFormat === 'TabSeparated' || clickhouseFormat === 'TabSeparatedRaw' || clickhouseFormat === 'TabSeparatedWithNames' || clickhouseFormat === 'TabSeparatedWithNamesAndTypes') {
+        if (clickhouseFormat === 'TabSeparated' ||
+            clickhouseFormat === 'TabSeparatedRaw' ||
+            clickhouseFormat === 'TabSeparatedWithNames' ||
+            clickhouseFormat === 'TabSeparatedWithNamesAndTypes') {
             return await new Promise((resolve, reject) => {
                 let data: any[] = [];
                 let metadata: Record<string, any> = {};
@@ -104,7 +107,7 @@ export class ClickhouseClient {
                     data.push(...chunk);
                 });
                 stream.on('metadata', function (eventMetadata) {
-                    metadata[eventMetadata.type] = eventMetadata.values;
+                    metadata[eventMetadata.type] = eventMetadata.value;
                 });
                 stream.on('error', function (reason) {
                     reject(reason);
@@ -128,7 +131,10 @@ export class ClickhouseClient {
             throw new Error(await body.text());
         }
         const clickhouseFormat = headers['x-clickhouse-format'];
-        if (clickhouseFormat === 'TabSeparated' || clickhouseFormat === 'TabSeparatedRaw' || clickhouseFormat === 'TabSeparatedWithNames' || clickhouseFormat === 'TabSeparatedWithNamesAndTypes') {
+        if (clickhouseFormat === 'TabSeparated' ||
+            clickhouseFormat === 'TabSeparatedRaw' ||
+            clickhouseFormat === 'TabSeparatedWithNames' ||
+            clickhouseFormat === 'TabSeparatedWithNamesAndTypes') {
             const tsvStream = new TSVTransform({
                 clickhouseFormat
             });

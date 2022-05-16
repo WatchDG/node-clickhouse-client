@@ -16,11 +16,38 @@ function lastIndexOf(buffer: Buffer, value: number, start: number, end: number):
     return DOES_NOT_CONTAIN;
 }
 
-function parseValue(buffer: Buffer): { parsed: boolean, value: any } {
-    return {
-        parsed: true,
-        value: buffer.toString()
-    };
+function parseColumn(column: Buffer, type?: string) {
+    if (type === 'Int8' ||
+        type == 'Int16' ||
+        type == 'Int32' ||
+        type == 'UInt8' ||
+        type == 'UInt16' ||
+        type == 'UInt32') {
+        return Number(column);
+    }
+    if (type === 'Bool') {
+        return column.toString() === 'true';
+    }
+    return column.toString();
+}
+
+function parseRow(row: Buffer[], names?: string[], types?: string[]): string[] | Record<string, any> {
+    if (names) {
+        const object: Record<any, any> = {};
+        if (types) {
+            row.forEach(function (value, index) {
+                object[names[index]] = parseColumn(value, types[index]);
+            });
+        } else {
+            row.forEach(function (value, index) {
+                object[names[index]] = parseColumn(value);
+            });
+        }
+        return object;
+    }
+    return row.map(function (column) {
+        return parseColumn(column);
+    });
 }
 
 type ClickhouseTSVFormat =
@@ -44,8 +71,8 @@ export class TSVTransform extends Transform {
 
     private readonly withNames: boolean = false;
     private readonly withTypes: boolean = false;
-    private names: string[] = [];
-    private types: string[] = [];
+    private names?: string[];
+    private types?: string[];
 
     constructor(options?: TSVTransformOptions) {
         const _options: TransformOptions = Object.assign({
@@ -80,9 +107,9 @@ export class TSVTransform extends Transform {
 
         const bufferLength = buffer.length;
 
-        const records = [];
+        const rows = [];
 
-        let record = [];
+        let row = [];
 
         let startValueIndex = 0;
         let endValueIndex = startValueIndex;
@@ -90,35 +117,32 @@ export class TSVTransform extends Transform {
             while (endValueIndex < bufferLength && buffer[endValueIndex] != TAB_CHAR_CODE && buffer[endValueIndex] != END_LINE_CHAR_CODE) {
                 endValueIndex++;
             }
-            const valueBuffer = buffer.subarray(startValueIndex, endValueIndex);
-            const parsedResult = parseValue(valueBuffer);
-            if (!parsedResult.parsed) {
-                callback(new Error(`Can not parse value: ${JSON.stringify(valueBuffer)}`));
-                return;
-            }
-            record.push(parsedResult.value);
+            const column = buffer.subarray(startValueIndex, endValueIndex);
+            row.push(column);
             if (buffer[endValueIndex] === END_LINE_CHAR_CODE) {
-                if (this.withNames && this.names.length == 0) {
+                if (this.withNames && !this.names) {
+                    const names = parseRow(row) as string[];
                     this.emit('metadata', {
                         type: 'names',
-                        values: record
+                        value: names
                     });
-                    this.names = record;
-                } else if (this.withTypes && this.types.length == 0) {
+                    this.names = names;
+                } else if (this.withTypes && !this.types) {
+                    const types = parseRow(row) as string[];
                     this.emit('metadata', {
                         type: 'types',
-                        values: record
+                        value: types
                     });
-                    this.types = record;
+                    this.types = types;
                 } else {
-                    records.push(record);
+                    rows.push(parseRow(row, this.names, this.types));
                 }
-                record = [];
+                row = [];
             }
             startValueIndex = endValueIndex + 1;
             endValueIndex = startValueIndex;
         }
-        this.push(records);
+        this.push(rows);
         callback(null);
     }
 }
