@@ -23,20 +23,44 @@ function parseValue(buffer: Buffer): { parsed: boolean, value: any } {
     };
 }
 
+type ClickhouseTSVFormat =
+    'TabSeparated'
+    | 'TabSeparatedRaw'
+    | 'TabSeparatedWithNames'
+    | 'TabSeparatedWithNamesAndTypes';
+
 export interface TSVTransformOptions {
-    writableHighWaterMark?: number;
-    readableHighWaterMark?: number;
+    transform?: {
+        writableHighWaterMark?: number;
+        readableHighWaterMark?: number;
+    };
+    clickhouseFormat?: ClickhouseTSVFormat;
 }
 
 export class TSVTransform extends Transform {
     private buffer: Buffer = Buffer.alloc(0);
     private lastCheckedOffset = 0;
+    private readonly clickhouseFormat: ClickhouseTSVFormat = 'TabSeparated';
+
+    private readonly withNames: boolean = false;
+    private readonly withTypes: boolean = false;
+    private names: string[] = [];
+    private types: string[] = [];
 
     constructor(options?: TSVTransformOptions) {
         const _options: TransformOptions = Object.assign({
             readableObjectMode: true
-        }, options);
+        }, options?.transform);
         super(_options);
+        if (options?.clickhouseFormat) {
+            this.clickhouseFormat = options.clickhouseFormat;
+        }
+        if (this.clickhouseFormat === 'TabSeparatedWithNames') {
+            this.withNames = true;
+        } else if (this.clickhouseFormat === 'TabSeparatedWithNamesAndTypes') {
+            this.withNames = true;
+            this.withTypes = true;
+        }
     }
 
     _transform(chunk: any, encoding: BufferEncoding, callback: TransformCallback) {
@@ -74,7 +98,21 @@ export class TSVTransform extends Transform {
             }
             record.push(parsedResult.value);
             if (buffer[endValueIndex] === END_LINE_CHAR_CODE) {
-                records.push(record);
+                if (this.withNames && this.names.length == 0) {
+                    this.emit('metadata', {
+                        type: 'names',
+                        values: record
+                    });
+                    this.names = record;
+                } else if (this.withTypes && this.types.length == 0) {
+                    this.emit('metadata', {
+                        type: 'types',
+                        values: record
+                    });
+                    this.types = record;
+                } else {
+                    records.push(record);
+                }
                 record = [];
             }
             startValueIndex = endValueIndex + 1;

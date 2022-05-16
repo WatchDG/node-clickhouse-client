@@ -69,6 +69,50 @@ describe('clickhouse client', function () {
                 expect(result.data).toEqual(expect.arrayContaining([['1', '2', '[3,4]', `['5','6']`]]));
             });
         });
+
+        describe('TabSeparatedWithNames', function () {
+            it('select', async function () {
+                const clickhouseClient = new ClickhouseClient();
+                const result = await clickhouseClient.query(`
+                SELECT  1 AS v1,
+                        '2' AS v2,
+                        [3, 4] AS v3,
+                        ['5','6'] AS v4
+                FORMAT TabSeparatedWithNames
+                `);
+                expect(result).toHaveProperty('data');
+                expect(result.rows).toBe(1);
+                expect(result.data).toBeInstanceOf(Array);
+                expect(result.data).toEqual(expect.arrayContaining([['1', '2', '[3,4]', `['5','6']`]]));
+                expect(result).toHaveProperty('meta');
+                expect(result.meta).toBeInstanceOf(Object);
+                expect(result.meta).toHaveProperty('names');
+                expect(result.meta.names).toEqual(['v1', 'v2', 'v3', 'v4']);
+            });
+        });
+
+        describe('TabSeparatedWithNamesAndTypes', function () {
+            it('select', async function () {
+                const clickhouseClient = new ClickhouseClient();
+                const result = await clickhouseClient.query(`
+                SELECT  1 AS v1,
+                        '2' AS v2,
+                        [3, 4] AS v3,
+                        ['5','6'] AS v4
+                FORMAT TabSeparatedWithNamesAndTypes
+                `);
+                expect(result).toHaveProperty('data');
+                expect(result.rows).toBe(1);
+                expect(result.data).toBeInstanceOf(Array);
+                expect(result.data).toEqual(expect.arrayContaining([['1', '2', '[3,4]', `['5','6']`]]));
+                expect(result).toHaveProperty('meta');
+                expect(result.meta).toBeInstanceOf(Object);
+                expect(result.meta).toHaveProperty('names');
+                expect(result.meta.names).toEqual(['v1', 'v2', 'v3', 'v4']);
+                expect(result.meta).toHaveProperty('types');
+                console.log(result.meta);
+            });
+        });
     });
 
     describe('stream', function () {

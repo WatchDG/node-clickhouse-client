@@ -92,13 +92,19 @@ export class ClickhouseClient {
         if (clickhouseFormat === 'JSON') {
             return await body.json();
         }
-        if (clickhouseFormat === 'TabSeparated' || clickhouseFormat === 'TabSeparatedRaw') {
+        if (clickhouseFormat === 'TabSeparated' || clickhouseFormat === 'TabSeparatedRaw' || clickhouseFormat === 'TabSeparatedWithNames' || clickhouseFormat === 'TabSeparatedWithNamesAndTypes') {
             return await new Promise((resolve, reject) => {
-                let data: any = [];
-                const tsvStream = new TSVTransform();
+                let data: any[] = [];
+                let metadata: Record<string, any> = {};
+                const tsvStream = new TSVTransform({
+                    clickhouseFormat
+                });
                 let stream = body.pipe(tsvStream);
                 stream.on('data', function (chunk) {
                     data.push(...chunk);
+                });
+                stream.on('metadata', function (eventMetadata) {
+                    metadata[eventMetadata.type] = eventMetadata.values;
                 });
                 stream.on('error', function (reason) {
                     reject(reason);
@@ -106,6 +112,7 @@ export class ClickhouseClient {
                 stream.on('end', function () {
                     resolve({
                         data,
+                        meta: metadata,
                         rows: data.length
                     });
                 });
@@ -121,8 +128,10 @@ export class ClickhouseClient {
             throw new Error(await body.text());
         }
         const clickhouseFormat = headers['x-clickhouse-format'];
-        if (clickhouseFormat === 'TabSeparated' || clickhouseFormat === 'TabSeparatedRaw') {
-            const tsvStream = new TSVTransform();
+        if (clickhouseFormat === 'TabSeparated' || clickhouseFormat === 'TabSeparatedRaw' || clickhouseFormat === 'TabSeparatedWithNames' || clickhouseFormat === 'TabSeparatedWithNamesAndTypes') {
+            const tsvStream = new TSVTransform({
+                clickhouseFormat
+            });
             return body.pipe(tsvStream);
         }
         throw new Error(`Unsupported clickhouse format: ${clickhouseFormat}`);
