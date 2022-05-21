@@ -18,12 +18,30 @@ function lastIndexOf(buffer: Buffer, value: number, start: number, end: number):
 
 function parseColumn(column: Buffer, type?: string) {
     if (type === 'Int8' ||
-        type == 'Int16' ||
-        type == 'Int32' ||
-        type == 'UInt8' ||
-        type == 'UInt16' ||
-        type == 'UInt32') {
-        return Number(column);
+        type === 'Int16' ||
+        type === 'Int32' ||
+        type === 'UInt8' ||
+        type === 'UInt16' ||
+        type === 'UInt32' ||
+        type === 'Float32' ||
+        type === 'Float64') {
+        if (Buffer.compare(column, Buffer.from('inf')) === 0) {
+            return Infinity;
+        } else if (Buffer.compare(column, Buffer.from('-inf')) === 0) {
+            return -Infinity;
+        } else if (Buffer.compare(column, Buffer.from('nan')) === 0) {
+            return NaN;
+        } else {
+            return Number(column);
+        }
+    }
+    if (type === 'Int64' ||
+        type === 'Int128' ||
+        type === 'Int256' ||
+        type === 'UInt64' ||
+        type === 'UInt128' ||
+        type === 'UInt256') {
+        return BigInt(column.toString());
     }
     if (type === 'Bool') {
         return column.toString() === 'true';

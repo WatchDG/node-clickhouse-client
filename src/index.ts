@@ -20,6 +20,13 @@ export interface ClickhouseClientRequest {
 
 export type Request = ClickhouseClientRequest | string;
 
+export interface MetadataItem {
+    name: string;
+    type?: string;
+}
+
+export type Metadata = MetadataItem[];
+
 export class ClickhouseClient {
     private readonly httpClient: Client;
 
@@ -53,6 +60,27 @@ export class ClickhouseClient {
             };
         }
         return request;
+    }
+
+    static getMetadata(names?: string[], types?: string[]): Metadata {
+        const metadata: Metadata = [];
+        if (names) {
+            if (types) {
+                names.forEach(function (name, index) {
+                    metadata.push({
+                        name,
+                        type: types[index]
+                    });
+                });
+            } else {
+                names.forEach(function (name) {
+                    metadata.push({
+                        name
+                    });
+                });
+            }
+        }
+        return metadata;
     }
 
     constructor(options?: ClickhouseClientOptions) {
@@ -115,16 +143,18 @@ export class ClickhouseClient {
                 stream.on('end', function () {
                     resolve({
                         data,
-                        meta: metadata,
+                        meta: ClickhouseClient.getMetadata(metadata.names, metadata.types),
                         rows: data.length
                     });
                 });
             });
         }
-        throw new Error(`Unsupported clickhouse format: ${clickhouseFormat}`);
+        if (clickhouseFormat) {
+            throw new Error(`Unsupported clickhouse format: ${clickhouseFormat}`);
+        }
     }
 
-    async stream(request: Request): Promise<Readable> {
+    async stream(request: Request): Promise<Readable | void> {
         const _request = ClickhouseClient.prepareRequest(request);
         const { statusCode, headers, body } = await this.request(_request);
         if (statusCode != 200) {
@@ -140,7 +170,9 @@ export class ClickhouseClient {
             });
             return body.pipe(tsvStream);
         }
-        throw new Error(`Unsupported clickhouse format: ${clickhouseFormat}`);
+        if (clickhouseFormat) {
+            throw new Error(`Unsupported clickhouse format: ${clickhouseFormat}`);
+        }
     }
 
     async close(): Promise<void> {
