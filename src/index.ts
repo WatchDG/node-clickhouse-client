@@ -116,6 +116,11 @@ export class ClickhouseClient {
         if (statusCode != 200) {
             throw new Error(await body.text());
         }
+        const clickhouseHeaders = Object.fromEntries(
+            Object.entries(headers).filter(function ([value]) {
+                return /^x-clickhouse*/i.test(value);
+            })
+        );
         const clickhouseFormat = headers['x-clickhouse-format'];
         if (clickhouseFormat === 'JSON') {
             return await body.json();
@@ -123,14 +128,18 @@ export class ClickhouseClient {
         if (clickhouseFormat === 'TabSeparated' ||
             clickhouseFormat === 'TabSeparatedRaw' ||
             clickhouseFormat === 'TabSeparatedWithNames' ||
-            clickhouseFormat === 'TabSeparatedWithNamesAndTypes') {
+            clickhouseFormat === 'TabSeparatedWithNamesAndTypes' ||
+            clickhouseFormat === 'TSV' ||
+            clickhouseFormat === 'TSVWithNames' ||
+            clickhouseFormat === 'TSVWithNamesAndTypes'
+        ) {
             return await new Promise((resolve, reject) => {
-                let data: any[] = [];
-                let metadata: Record<string, any> = {};
+                const data: any[] = [];
+                const metadata: Record<'names' | 'types' | string, any> = {};
                 const tsvStream = new TSVTransform({
                     clickhouseFormat
                 });
-                let stream = body.pipe(tsvStream);
+                const stream = body.pipe(tsvStream);
                 stream.on('data', function (chunk) {
                     data.push(...chunk);
                 });
@@ -144,7 +153,8 @@ export class ClickhouseClient {
                     resolve({
                         data,
                         meta: ClickhouseClient.getMetadata(metadata.names, metadata.types),
-                        rows: data.length
+                        rows: data.length,
+                        headers: clickhouseHeaders
                     });
                 });
             });
@@ -152,23 +162,38 @@ export class ClickhouseClient {
         if (clickhouseFormat) {
             throw new Error(`Unsupported clickhouse format: ${clickhouseFormat}`);
         }
+        return {
+            headers: clickhouseHeaders
+        };
     }
 
-    async stream(request: Request): Promise<Readable | void> {
+    async stream(request: Request) {
         const _request = ClickhouseClient.prepareRequest(request);
         const { statusCode, headers, body } = await this.request(_request);
         if (statusCode != 200) {
             throw new Error(await body.text());
         }
+        const clickhouseHeaders = Object.fromEntries(
+            Object.entries(headers).filter(function ([value]) {
+                return /^x-clickhouse*/i.test(value);
+            })
+        );
         const clickhouseFormat = headers['x-clickhouse-format'];
         if (clickhouseFormat === 'TabSeparated' ||
             clickhouseFormat === 'TabSeparatedRaw' ||
             clickhouseFormat === 'TabSeparatedWithNames' ||
-            clickhouseFormat === 'TabSeparatedWithNamesAndTypes') {
+            clickhouseFormat === 'TabSeparatedWithNamesAndTypes' ||
+            clickhouseFormat === 'TSV' ||
+            clickhouseFormat === 'TSVWithNames' ||
+            clickhouseFormat === 'TSVWithNamesAndTypes'
+        ) {
             const tsvStream = new TSVTransform({
                 clickhouseFormat
             });
-            return body.pipe(tsvStream);
+            return {
+                stream: tsvStream,
+                headers: clickhouseHeaders
+            };
         }
         if (clickhouseFormat) {
             throw new Error(`Unsupported clickhouse format: ${clickhouseFormat}`);

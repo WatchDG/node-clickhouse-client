@@ -46,6 +46,9 @@ function parseColumn(column: Buffer, type?: string) {
     if (type === 'Bool') {
         return column.toString() === 'true';
     }
+    if (type === 'DateTime') {
+        return new Date(column.toString());
+    }
     return column.toString();
 }
 
@@ -72,7 +75,10 @@ type ClickhouseTSVFormat =
     'TabSeparated'
     | 'TabSeparatedRaw'
     | 'TabSeparatedWithNames'
-    | 'TabSeparatedWithNamesAndTypes';
+    | 'TabSeparatedWithNamesAndTypes'
+    | 'TSV'
+    | 'TSVWithNames'
+    | 'TSVWithNamesAndTypes';
 
 export interface TSVTransformOptions {
     transform?: {
@@ -100,9 +106,15 @@ export class TSVTransform extends Transform {
         if (options?.clickhouseFormat) {
             this.clickhouseFormat = options.clickhouseFormat;
         }
-        if (this.clickhouseFormat === 'TabSeparatedWithNames') {
+        if (
+            this.clickhouseFormat === 'TabSeparatedWithNames' ||
+            this.clickhouseFormat === 'TSVWithNames'
+        ) {
             this.withNames = true;
-        } else if (this.clickhouseFormat === 'TabSeparatedWithNamesAndTypes') {
+        } else if (
+            this.clickhouseFormat === 'TabSeparatedWithNamesAndTypes' ||
+            this.clickhouseFormat === 'TSVWithNamesAndTypes'
+        ) {
             this.withNames = true;
             this.withTypes = true;
         }

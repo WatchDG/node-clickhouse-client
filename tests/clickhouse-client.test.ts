@@ -1,15 +1,42 @@
 import { ClickhouseClient } from "../src";
-import { Readable } from "stream";
 
 describe('clickhouse client', function () {
+    const DATABASE = "test";
+
     let clickhouseClient: ClickhouseClient;
 
     beforeAll(async function () {
         clickhouseClient = new ClickhouseClient();
+        await clickhouseClient.query(`
+            CREATE DATABASE IF NOT EXISTS "${DATABASE}";
+        `);
+        await clickhouseClient.query(`
+            DROP TABLE IF EXISTS "${DATABASE}"."test_insert";
+        `);
+        await clickhouseClient.query(`
+            CREATE TABLE "${DATABASE}"."test_insert"
+            (
+                time  DateTime DEFAULT now(),
+                key   String,
+                value Int32
+            ) ENGINE MergeTree() ORDER BY time;
+        `);
     });
 
     afterAll(async function () {
+        await clickhouseClient.query(`
+            DROP TABLE "${DATABASE}"."test_insert";
+        `);
+        await clickhouseClient.query(`
+            DROP DATABASE ${DATABASE};
+        `);
         await clickhouseClient.close();
+    });
+
+    beforeEach(async function () {
+        await clickhouseClient.query(`
+            TRUNCATE TABLE IF EXISTS "${DATABASE}"."test_insert";
+        `);
     });
 
     it('init', function () {
@@ -441,18 +468,51 @@ describe('clickhouse client', function () {
             });
         });
 
-        it("create and drop table", async function () {
-            const resultCreate = await clickhouseClient.query(`
-                CREATE TABLE IF NOT EXISTS "default"."user"
-                (
-                    id         UInt32,
-                    first_name String,
-                    last_name  String
-                ) ENGINE MergeTree() ORDER BY id;
+        it('insert ans select values', async function () {
+            await clickhouseClient.query(`
+                INSERT INTO "${DATABASE}"."test_insert" (key, value)
+                VALUES ('a', 1),
+                       ('b', 2),
+                       ('c', 3);
             `);
-            expect(resultCreate).toBeUndefined();
-            const resultDrop = await clickhouseClient.query(`DROP TABLE "default"."user";`);
-            expect(resultDrop).toBeUndefined();
+            const result = await clickhouseClient.query(`
+                SELECT *
+                FROM "${DATABASE}"."test_insert"
+                    FORMAT TSVWithNamesAndTypes;
+            `);
+            expect(result).toBeInstanceOf(Object);
+            expect(result).toHaveProperty('meta');
+            expect(result).toHaveProperty('rows');
+            expect(result.rows).toBe(3);
+            expect(result).toHaveProperty('data');
+            expect(result.data).toBeInstanceOf(Array);
+            expect(result.data.length).toBe(result.rows);
+        });
+
+        it('select with limit', async function () {
+            await clickhouseClient.query(`
+                INSERT INTO "${DATABASE}"."test_insert" (key, value)
+                VALUES ('a', 1),
+                       ('b', 2),
+                       ('c', 3);
+            `);
+            const result = await clickhouseClient.query(`
+                SELECT *
+                FROM "${DATABASE}"."test_insert"
+                ORDER BY time
+                LIMIT 1
+                FORMAT
+                TSVWithNamesAndTypes;
+            `);
+            expect(result).toBeInstanceOf(Object);
+            expect(result).toHaveProperty('meta');
+            expect(result).toHaveProperty('rows');
+            expect(result.rows).toBe(1);
+            expect(result).toHaveProperty('data');
+            expect(result.data).toBeInstanceOf(Array);
+            expect(result.data.length).toBe(result.rows);
+            expect(result).toHaveProperty('headers');
+            expect(result.headers).toBeInstanceOf(Object);
         });
     });
 });
