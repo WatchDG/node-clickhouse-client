@@ -21,3 +21,25 @@ import {ClickhouseClient} from '@watchdg/clickhouse-client';
     console.log(data);
 })();
 ```
+
+## Supported types
+
+| Clickhouse | NodeJS  |
+|------------|---------|
+| Int8       | Number  |
+| Int16      | Number  |
+| Int32      | Number  |
+| UInt8      | Number  |
+| UInt16     | Number  |
+| UInt32     | Number  |
+| Float32    | Number  |
+| Float64    | Number  |
+| Int64      | BigInt  |
+| Int128     | BigInt  |
+| Int256     | BigInt  |
+| UInt64     | BigInt  |
+| UInt128    | BigInt  |
+| UInt256    | BigInt  |
+| Bool       | Boolean |
+| DateTime   | Date    |
+| String     | String  |
