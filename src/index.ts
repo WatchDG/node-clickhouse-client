@@ -130,6 +130,7 @@ export class ClickhouseClient {
             clickhouseFormat === 'TabSeparatedWithNames' ||
             clickhouseFormat === 'TabSeparatedWithNamesAndTypes' ||
             clickhouseFormat === 'TSV' ||
+            clickhouseFormat === 'TSVRaw' ||
             clickhouseFormat === 'TSVWithNames' ||
             clickhouseFormat === 'TSVWithNamesAndTypes'
         ) {
@@ -184,6 +185,7 @@ export class ClickhouseClient {
             clickhouseFormat === 'TabSeparatedWithNames' ||
             clickhouseFormat === 'TabSeparatedWithNamesAndTypes' ||
             clickhouseFormat === 'TSV' ||
+            clickhouseFormat === 'TSVRaw' ||
             clickhouseFormat === 'TSVWithNames' ||
             clickhouseFormat === 'TSVWithNamesAndTypes'
         ) {

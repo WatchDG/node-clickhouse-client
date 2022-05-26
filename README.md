@@ -22,6 +22,13 @@ import {ClickhouseClient} from '@watchdg/clickhouse-client';
 })();
 ```
 
+## Supported formats
+
+* TabSeparated (TSV)
+* TabSeparatedRaw (TSVRaw)
+* TabSeparatedWithNames (TSVWithNames)
+* TabSeparatedWithNamesAndTypes (TSVWithNamesAndTypes)
+
 ## Supported types
 
 | Clickhouse | NodeJS  |

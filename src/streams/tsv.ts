@@ -77,6 +77,7 @@ type ClickhouseTSVFormat =
     | 'TabSeparatedWithNames'
     | 'TabSeparatedWithNamesAndTypes'
     | 'TSV'
+    | 'TSVRaw'
     | 'TSVWithNames'
     | 'TSVWithNamesAndTypes';
 
