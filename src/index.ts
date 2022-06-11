@@ -5,6 +5,8 @@ import { TSVTransform } from "./streams/tsv";
 import type { Dispatcher } from 'undici';
 import type { Readable } from "stream";
 
+export const DEFAULT_DATABASE = 'default';
+
 export interface ClickhouseClientOptions {
     protocol?: 'http' | 'https';
     user?: string;
@@ -154,6 +156,7 @@ export class ClickhouseClient {
                     resolve({
                         data,
                         meta: ClickhouseClient.getMetadata(metadata.names, metadata.types),
+                        totals: metadata.totals,
                         rows: data.length,
                         headers: clickhouseHeaders
                     });

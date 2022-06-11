@@ -514,5 +514,67 @@ describe('clickhouse client', function () {
             expect(result).toHaveProperty('headers');
             expect(result.headers).toBeInstanceOf(Object);
         });
+
+        describe('WITH TOTALS', function () {
+
+            beforeAll(async function () {
+                await clickhouseClient.query(`
+                    DROP TABLE IF EXISTS "${DATABASE}".test_with_totals;
+                `);
+                await clickhouseClient.query(`
+                    CREATE TABLE "${DATABASE}".test_with_totals
+                    (
+                        a UInt8,
+                        b UInt8
+                    ) ENGINE MergeTree() ORDER BY a;
+                `);
+                await clickhouseClient.query(`
+                    INSERT INTO "${DATABASE}".test_with_totals
+                    SELECT number % 7, number % 11
+                    FROM numbers(100);
+                `);
+            });
+
+            afterAll(async function () {
+                await clickhouseClient.query(`
+                    DROP TABLE "${DATABASE}".test_with_totals;
+                `);
+            });
+
+            it('JSON', async function () {
+                const result = await clickhouseClient.query(`
+                    SELECT a AS value, count(DISTINCT b) AS count
+                    FROM "${DATABASE}".test_with_totals
+                    GROUP BY a
+                    WITH TOTALS
+                        FORMAT JSON;
+                `);
+                expect(result).toBeInstanceOf(Object);
+                expect(result).toHaveProperty('rows');
+                expect(result.rows).toBe(7);
+                expect(result).toHaveProperty('totals');
+                expect(result.totals).toBeInstanceOf(Object);
+                expect(result.totals).toHaveProperty('value');
+                expect(result.totals).toHaveProperty('count');
+            });
+
+            it('TabSeparatedWithNamesAndTypes', async function () {
+                const result = await clickhouseClient.query(`
+                    SELECT a AS value, count(DISTINCT b) AS count
+                    FROM "${DATABASE}".test_with_totals
+                    GROUP BY a
+                    WITH TOTALS
+                        FORMAT TabSeparatedWithNamesAndTypes;
+                `);
+                expect(result).toBeInstanceOf(Object);
+                expect(result).toHaveProperty('rows');
+                expect(result.rows).toBe(7);
+                expect(result).toHaveProperty('totals');
+                expect(result.totals).toBeInstanceOf(Object);
+                expect(result.totals).toHaveProperty('value');
+                expect(result.totals).toHaveProperty('count');
+            });
+
+        });
     });
 });

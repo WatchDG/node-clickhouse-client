@@ -96,8 +96,11 @@ export class TSVTransform extends Transform {
 
     private readonly withNames: boolean = false;
     private readonly withTypes: boolean = false;
+    private withTotals = false;
+
     private names?: string[];
     private types?: string[];
+    private totals?: Record<string, any>;
 
     constructor(options?: TSVTransformOptions) {
         const _options: TransformOptions = Object.assign({
@@ -148,6 +151,12 @@ export class TSVTransform extends Transform {
             while (endValueIndex < bufferLength && buffer[endValueIndex] != TAB_CHAR_CODE && buffer[endValueIndex] != END_LINE_CHAR_CODE) {
                 endValueIndex++;
             }
+            if (buffer[endValueIndex] === END_LINE_CHAR_CODE && endValueIndex - startValueIndex == 0) {
+                this.withTotals = true;
+                startValueIndex = endValueIndex + 1;
+                endValueIndex = startValueIndex;
+                continue;
+            }
             const column = buffer.subarray(startValueIndex, endValueIndex);
             row.push(column);
             if (buffer[endValueIndex] === END_LINE_CHAR_CODE) {
@@ -165,6 +174,12 @@ export class TSVTransform extends Transform {
                         value: types
                     });
                     this.types = types;
+                } else if (this.withTotals) {
+                    const totals = parseRow(row, this.names, this.types);
+                    this.emit('metadata', {
+                        type: 'totals',
+                        value: totals
+                    });
                 } else {
                     rows.push(parseRow(row, this.names, this.types));
                 }
