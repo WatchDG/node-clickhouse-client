@@ -465,6 +465,41 @@ describe('clickhouse client', function () {
                         expect(result.meta).toEqual(expect.arrayContaining([{ name: 'value', type: 'Float64' }]));
                     });
                 });
+                describe('String', function () {
+                    it('empty', async function () {
+                        const clickhouseClient = new ClickhouseClient();
+                        const result = await clickhouseClient.query(`
+                            SELECT '' AS emptyValue
+                            FORMAT TabSeparatedWithNamesAndTypes`
+                        );
+                        expect(result).toHaveProperty('data');
+                        expect(result.rows).toBe(1);
+                        expect(result.data).toBeInstanceOf(Array);
+                        expect(result.data).toEqual(expect.arrayContaining([{ emptyValue: '' }]));
+                        expect(result).toHaveProperty('meta');
+                        expect(result.meta).toBeInstanceOf(Array);
+                        expect(result.meta).toEqual(expect.arrayContaining([
+                            { name: 'emptyValue', type: 'String' }
+                        ]));
+                    });
+                    it('empty 2', async function () {
+                        const clickhouseClient = new ClickhouseClient();
+                        const result = await clickhouseClient.query(`
+                            SELECT 'a' AS value, '' AS emptyValue
+                            FORMAT TabSeparatedWithNamesAndTypes`
+                        );
+                        expect(result).toHaveProperty('data');
+                        expect(result.rows).toBe(1);
+                        expect(result.data).toBeInstanceOf(Array);
+                        expect(result.data).toEqual(expect.arrayContaining([{ value: 'a', emptyValue: '' }]));
+                        expect(result).toHaveProperty('meta');
+                        expect(result.meta).toBeInstanceOf(Array);
+                        expect(result.meta).toEqual(expect.arrayContaining([
+                            { name: 'value', type: 'String' },
+                            { name: 'emptyValue', type: 'String' }
+                        ]));
+                    });
+                });
             });
         });
 
