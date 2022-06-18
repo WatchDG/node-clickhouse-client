@@ -24,12 +24,6 @@ describe('clickhouse client', function () {
     });
 
     afterAll(async function () {
-        await clickhouseClient.query(`
-            DROP TABLE "${DATABASE}"."test_insert";
-        `);
-        await clickhouseClient.query(`
-            DROP DATABASE ${DATABASE};
-        `);
         await clickhouseClient.close();
     });
 

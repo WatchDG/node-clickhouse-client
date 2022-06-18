@@ -1,3 +1,4 @@
+import { createGunzip } from "zlib";
 import { Client } from "undici";
 
 import { TSVTransform } from "./streams/tsv";
@@ -5,7 +6,10 @@ import { TSVTransform } from "./streams/tsv";
 import type { Dispatcher } from 'undici';
 import type { Readable } from "stream";
 
+
 export const DEFAULT_DATABASE = 'default';
+
+export type ClickhouseParams = 'extremes' | 'enable_http_compression' | string;
 
 export interface ClickhouseClientOptions {
     protocol?: 'http' | 'https';
@@ -13,10 +17,12 @@ export interface ClickhouseClientOptions {
     password?: string;
     host?: string;
     port?: string;
+    params?: Record<ClickhouseParams, string>;
 }
 
 export interface ClickhouseClientRequest {
     query: string;
+    params?: Record<ClickhouseParams, string>;
     data?: Readable;
 }
 
@@ -31,6 +37,7 @@ export type Metadata = MetadataItem[];
 
 export class ClickhouseClient {
     private readonly httpClient: Client;
+    private readonly params: Record<string, string> = {};
 
     static getBaseUrl(options?: ClickhouseClientOptions): URL {
         const url = new URL(`http://localhost:8123`);
@@ -88,18 +95,28 @@ export class ClickhouseClient {
     constructor(options?: ClickhouseClientOptions) {
         const baseUrl = ClickhouseClient.getBaseUrl(options);
         this.httpClient = new Client(baseUrl);
+        if (options?.params) {
+            this.params = options.params;
+        }
     }
 
     private request(request: ClickhouseClientRequest): Promise<Dispatcher.ResponseData> {
+        const headers = {
+            'Accept-Encoding': 'gzip'
+        };
         const requestOptions: Dispatcher.RequestOptions = {
             method: 'POST',
-            path: '/'
+            path: '/',
+            headers
         };
+        const params: Record<string, string> = Object.assign({}, this.params, request.params);
         if (request.data) {
-            requestOptions.path = `/?query=${encodeURIComponent(request.query)}`;
+            params.query = encodeURIComponent(request.query);
             requestOptions.body = request.data;
+            requestOptions.query = params;
         } else {
             requestOptions.body = request.query;
+            requestOptions.query = params;
         }
         return this.httpClient.request(requestOptions);
     }
@@ -124,6 +141,7 @@ export class ClickhouseClient {
             })
         );
         const clickhouseFormat = headers['x-clickhouse-format'];
+        const contentEncoding = headers['content-encoding'];
         if (clickhouseFormat === 'JSON') {
             return await body.json();
         }
@@ -138,28 +156,55 @@ export class ClickhouseClient {
         ) {
             return await new Promise((resolve, reject) => {
                 const data: any[] = [];
-                const metadata: Record<'names' | 'types' | string, any> = {};
+                const metadata: Record<'names' | 'types' | 'extremes' | string, any> = {};
+
                 const tsvStream = new TSVTransform({
                     clickhouseFormat
                 });
-                const stream = body.pipe(tsvStream);
+
+                let stream;
+                if (contentEncoding === 'gzip') {
+                    stream = body.pipe(createGunzip()).pipe(tsvStream);
+                } else {
+                    stream = body.pipe(tsvStream);
+                }
+
                 stream.on('data', function (chunk) {
                     data.push(...chunk);
                 });
-                stream.on('metadata', function (eventMetadata) {
-                    metadata[eventMetadata.type] = eventMetadata.value;
+                stream.once('meta-names', function (names) {
+                    metadata['names'] = names;
+                });
+                stream.once('meta-types', function (types) {
+                    metadata['types'] = types;
+                });
+                stream.on('meta-extra', function (extra) {
+                    Object.assign(metadata, extra);
                 });
                 stream.on('error', function (reason) {
                     reject(reason);
                 });
                 stream.on('end', function () {
-                    resolve({
+                    const response: {
+                        data: any[];
+                        meta: MetadataItem[];
+                        rows: number;
+                        totals?: any[];
+                        extremes?: { min: any, max: any },
+                        headers: Record<string, any>;
+                    } = {
                         data,
                         meta: ClickhouseClient.getMetadata(metadata.names, metadata.types),
-                        totals: metadata.totals,
                         rows: data.length,
                         headers: clickhouseHeaders
-                    });
+                    };
+                    if (metadata.totals) {
+                        response.totals = metadata.totals;
+                    }
+                    if (metadata.extremes) {
+                        response.extremes = metadata.extremes;
+                    }
+                    resolve(response);
                 });
             });
         }

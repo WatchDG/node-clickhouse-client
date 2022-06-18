@@ -93,9 +93,8 @@ enum TSVRowType {
     Types,
     Data,
     Empty,
-    Totals
+    Extra
 }
-
 
 export interface TSVTransformOptions {
     transform?: {
@@ -103,12 +102,15 @@ export interface TSVTransformOptions {
         readableHighWaterMark?: number;
     };
     clickhouseFormat?: ClickhouseTSVFormat;
+    extremes?: boolean;
 }
 
 export class TSVTransform extends Transform {
     private buffer: Buffer = Buffer.alloc(0);
     private lastCheckedOffset = 0;
     private readonly clickhouseFormat: ClickhouseTSVFormat = 'TabSeparated';
+
+    private readonly withExtremes: boolean = false;
 
     private numOfColumns = 0;
     private previousRowType: TSVRowType = TSVRowType.Unknown;
@@ -117,7 +119,8 @@ export class TSVTransform extends Transform {
 
     private names?: string[];
     private types?: string[];
-    private totals?: Record<string, any>;
+
+    private readonly extraRows: Record<string, any>[] = [];
 
     constructor(options?: TSVTransformOptions) {
         const _options: TransformOptions = Object.assign({
@@ -128,6 +131,9 @@ export class TSVTransform extends Transform {
 
         if (options?.clickhouseFormat) {
             this.clickhouseFormat = options.clickhouseFormat;
+        }
+        if (options?.extremes) {
+            this.withExtremes = options.extremes;
         }
 
         switch (this.clickhouseFormat) {
@@ -143,8 +149,35 @@ export class TSVTransform extends Transform {
             case 'TSV':
             case 'TabSeparatedRaw':
             case 'TSVRaw':
-                this.setCursor(TSVRowType.Unknown, TSVRowType.Data, TSVRowType.Unknown);
+                this.setCursor(TSVRowType.Unknown, TSVRowType.Data, TSVRowType.Data);
         }
+
+        this.once('end', () => {
+            if (this.extraRows.length > 0) {
+                let extra: { totals?: any, extremes?: { min: any, max: any } } = {};
+                if (this.extraRows.length === 1) {
+                    extra = {
+                        totals: this.extraRows[0]
+                    };
+                } else if (this.extraRows.length === 2) {
+                    extra = {
+                        extremes: {
+                            min: this.extraRows[0],
+                            max: this.extraRows[1]
+                        }
+                    };
+                } else if (this.extraRows.length === 3) {
+                    extra = {
+                        totals: this.extraRows[0],
+                        extremes: {
+                            min: this.extraRows[1],
+                            max: this.extraRows[2]
+                        }
+                    };
+                }
+                this.emit('meta-extra', extra);
+            }
+        });
     }
 
     private setCursor(previousRowType: TSVRowType, currentRowType: TSVRowType, nextRowType: TSVRowType) {
@@ -158,14 +191,11 @@ export class TSVTransform extends Transform {
     }
 
     private nextCursor(nextRowType: TSVRowType = TSVRowType.Unknown) {
-        if (this.currentRowType === TSVRowType.Names && this.nextRowType === TSVRowType.Unknown) {
-            this.nextRowType = TSVRowType.Data;
-        }
-        if (this.currentRowType === TSVRowType.Types && this.nextRowType === TSVRowType.Unknown) {
-            this.nextRowType = TSVRowType.Data;
-        }
-        if (this.previousRowType === TSVRowType.Data && this.currentRowType === TSVRowType.Empty) {
-            this.nextRowType = TSVRowType.Totals;
+        if (this.previousRowType === TSVRowType.Data && this.currentRowType === TSVRowType.Empty ||
+            this.currentRowType === TSVRowType.Extra ||
+            this.previousRowType === TSVRowType.Extra && this.currentRowType === TSVRowType.Empty
+        ) {
+            this.nextRowType = TSVRowType.Extra;
         }
 
         this.previousRowType = this.currentRowType;
@@ -228,29 +258,20 @@ export class TSVTransform extends Transform {
             }
             if (this.currentRowType === TSVRowType.Names) {
                 const names = parseRow(row) as string[];
-                this.emit('metadata', {
-                    type: 'names',
-                    value: names
-                });
+                this.emit('meta-names', names);
                 this.names = names;
             } else if (this.currentRowType === TSVRowType.Types) {
                 const types = parseRow(row) as string[];
-                this.emit('metadata', {
-                    type: 'types',
-                    value: types
-                });
+                this.emit('meta-types', types);
                 this.types = types;
-            } else if (this.currentRowType === TSVRowType.Totals) {
-                const totals = parseRow(row, this.names, this.types);
-                this.emit('metadata', {
-                    type: 'totals',
-                    value: totals
-                });
+            } else if (this.currentRowType === TSVRowType.Extra) {
+                const parsedRow = parseRow(row, this.names, this.types);
+                this.extraRows.push(parsedRow);
             } else {
                 this.currentCursor(TSVRowType.Data);
                 rows.push(parseRow(row, this.names, this.types));
             }
-            this.nextCursor(TSVRowType.Unknown);
+            this.nextCursor();
         }
 
         this.push(rows);
