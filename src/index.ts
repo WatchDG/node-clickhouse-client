@@ -1,11 +1,11 @@
-import { createGunzip } from "zlib";
+import { createBrotliDecompress, createGunzip, createInflate, gzip } from "zlib";
 import { Client } from "undici";
 
 import { TSVTransform } from "./streams/tsv";
 
 import type { Dispatcher } from 'undici';
 import type { Readable } from "stream";
-
+import type { IncomingHttpHeaders } from "http";
 
 export const DEFAULT_DATABASE = 'default';
 
@@ -24,6 +24,8 @@ export interface ClickhouseClientRequest {
     query: string;
     params?: Record<ClickhouseParams, string>;
     data?: Readable;
+    compressed?: 'gzip' | 'br' | 'deflate';
+    headers?: IncomingHttpHeaders;
 }
 
 export type Request = ClickhouseClientRequest | string;
@@ -101,9 +103,13 @@ export class ClickhouseClient {
     }
 
     private request(request: ClickhouseClientRequest): Promise<Dispatcher.ResponseData> {
-        const headers = {
-            'Accept-Encoding': 'gzip'
+        const headers: IncomingHttpHeaders = {
+            'accept-encoding': 'br, gzip, deflate'
         };
+        if (request.compressed) {
+            headers['content-encoding'] = request.compressed;
+        }
+        Object.assign(headers, request.headers);
         const requestOptions: Dispatcher.RequestOptions = {
             method: 'POST',
             path: '/',
@@ -111,7 +117,7 @@ export class ClickhouseClient {
         };
         const params: Record<string, string> = Object.assign({}, this.params, request.params);
         if (request.data) {
-            params.query = encodeURIComponent(request.query);
+            params.query = request.query;
             requestOptions.body = request.data;
             requestOptions.query = params;
         } else {
@@ -142,6 +148,11 @@ export class ClickhouseClient {
         );
         const clickhouseFormat = headers['x-clickhouse-format'];
         const contentEncoding = headers['content-encoding'];
+
+        if (contentEncoding && contentEncoding != 'gzip' && contentEncoding != 'br' && contentEncoding != 'deflate') {
+            throw new Error(`Unsupported content encoding: ${contentEncoding}`);
+        }
+
         if (clickhouseFormat === 'JSON') {
             return await body.json();
         }
@@ -165,6 +176,10 @@ export class ClickhouseClient {
                 let stream;
                 if (contentEncoding === 'gzip') {
                     stream = body.pipe(createGunzip()).pipe(tsvStream);
+                } else if (contentEncoding === 'br') {
+                    stream = body.pipe(createBrotliDecompress()).pipe(tsvStream);
+                } else if (contentEncoding === 'deflate') {
+                    stream = body.pipe(createInflate());
                 } else {
                     stream = body.pipe(tsvStream);
                 }
