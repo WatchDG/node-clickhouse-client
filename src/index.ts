@@ -6,6 +6,7 @@ import { TSVTransform } from "./streams/tsv";
 import type { Dispatcher } from 'undici';
 import type { Readable } from "stream";
 import type { IncomingHttpHeaders } from "http";
+import BodyReadable from "undici/types/readable";
 
 export const DEFAULT_DATABASE = 'default';
 
@@ -94,6 +95,88 @@ export class ClickhouseClient {
         return metadata;
     }
 
+    private static getStreamDecoder(contentEncoding: string) {
+        switch (contentEncoding) {
+            case 'gzip':
+                return createGunzip();
+            case 'br':
+                return createBrotliDecompress();
+            case 'deflate':
+                return createInflate();
+            default:
+                throw new Error(`Unsupported content encoding: ${contentEncoding}`);
+        }
+    }
+
+    private static getStreamTransformer(clickhouseFormat: string) {
+        switch (clickhouseFormat) {
+            case 'TabSeparated':
+            case 'TabSeparatedRaw':
+            case 'TabSeparatedWithNames':
+            case 'TabSeparatedWithNamesAndTypes':
+            case 'TSV':
+            case 'TSVRaw':
+            case 'TSVWithNames':
+            case 'TSVWithNamesAndTypes':
+                return new TSVTransform({
+                    clickhouseFormat
+                });
+            default:
+                throw new Error(`Unsupported clickhouse format: ${clickhouseFormat}`);
+        }
+    }
+
+    private static getClickhouseHeaders(headers: Record<string, any>) {
+        const entries = Object.entries(headers).filter(function ([value]) {
+            return /^x-clickhouse*/i.test(value);
+        });
+        return Object.fromEntries(entries);
+    }
+
+    private static getStreamData(stream: Readable, headers: Record<string, any>) {
+        return new Promise(function (resolve, reject) {
+            const data: any[] = [];
+            const metadata: Record<'names' | 'types' | 'extremes' | string, any> = {};
+            stream.on('data', function (chunk) {
+                data.push(...chunk);
+            });
+            stream.once('meta-names', function (names) {
+                metadata['names'] = names;
+            });
+            stream.once('meta-types', function (types) {
+                metadata['types'] = types;
+            });
+            stream.once('meta-extra', function (extra) {
+                Object.assign(metadata, extra);
+            });
+            stream.on('error', function (reason) {
+                reject(reason);
+            });
+            stream.on('end', function () {
+                const response: {
+                    data: any[];
+                    meta: MetadataItem[];
+                    rows: number;
+                    totals?: any[];
+                    extremes?: { min: any, max: any };
+                    headers: Record<string, any>;
+                } = {
+                    data,
+                    meta: ClickhouseClient.getMetadata(metadata.names, metadata.types),
+                    rows: data.length,
+                    headers
+                };
+                if (metadata.totals) {
+                    response.totals = metadata.totals;
+                }
+                if (metadata.extremes) {
+                    response.extremes = metadata.extremes;
+                }
+                resolve(response);
+            });
+        });
+    }
+
     constructor(options?: ClickhouseClientOptions) {
         const baseUrl = ClickhouseClient.getBaseUrl(options);
         this.httpClient = new Client(baseUrl);
@@ -102,18 +185,18 @@ export class ClickhouseClient {
         }
     }
 
-    private request(request: ClickhouseClientRequest): Promise<Dispatcher.ResponseData> {
-        const headers: IncomingHttpHeaders = {
+    private async request(request: ClickhouseClientRequest): Promise<Dispatcher.ResponseData> {
+        const incomingHeaders: IncomingHttpHeaders = {
             'accept-encoding': 'br, gzip, deflate'
         };
         if (request.compressed) {
-            headers['content-encoding'] = request.compressed;
+            incomingHeaders['content-encoding'] = request.compressed;
         }
-        Object.assign(headers, request.headers);
+        Object.assign(incomingHeaders, request.headers);
         const requestOptions: Dispatcher.RequestOptions = {
             method: 'POST',
             path: '/',
-            headers
+            headers: incomingHeaders
         };
         const params: Record<string, string> = Object.assign({}, this.params, request.params);
         if (request.data) {
@@ -124,7 +207,11 @@ export class ClickhouseClient {
             requestOptions.body = request.query;
             requestOptions.query = params;
         }
-        return this.httpClient.request(requestOptions);
+        const { statusCode, body, ...other } = await this.httpClient.request(requestOptions);
+        if (statusCode != 200) {
+            throw new Error(await body.text());
+        }
+        return { statusCode, body, ...other };
     }
 
     async ping(): Promise<boolean> {
@@ -137,132 +224,55 @@ export class ClickhouseClient {
 
     async query(request: Request) {
         const _request = ClickhouseClient.prepareRequest(request);
-        const { statusCode, headers, body } = await this.request(_request);
-        if (statusCode != 200) {
-            throw new Error(await body.text());
-        }
-        const clickhouseHeaders = Object.fromEntries(
-            Object.entries(headers).filter(function ([value]) {
-                return /^x-clickhouse*/i.test(value);
-            })
-        );
-        const clickhouseFormat = headers['x-clickhouse-format'];
-        const contentEncoding = headers['content-encoding'];
+        const { headers, body } = await this.request(_request);
 
-        if (contentEncoding && contentEncoding != 'gzip' && contentEncoding != 'br' && contentEncoding != 'deflate') {
-            throw new Error(`Unsupported content encoding: ${contentEncoding}`);
-        }
+        const clickhouseHeaders = ClickhouseClient.getClickhouseHeaders(headers);
+
+        const contentEncoding = headers['content-encoding'] as string | undefined;
+        const clickhouseFormat = headers['x-clickhouse-format'] as string | undefined;
 
         if (clickhouseFormat === 'JSON') {
             return await body.json();
         }
-        if (clickhouseFormat === 'TabSeparated' ||
-            clickhouseFormat === 'TabSeparatedRaw' ||
-            clickhouseFormat === 'TabSeparatedWithNames' ||
-            clickhouseFormat === 'TabSeparatedWithNamesAndTypes' ||
-            clickhouseFormat === 'TSV' ||
-            clickhouseFormat === 'TSVRaw' ||
-            clickhouseFormat === 'TSVWithNames' ||
-            clickhouseFormat === 'TSVWithNamesAndTypes'
-        ) {
-            return await new Promise((resolve, reject) => {
-                const data: any[] = [];
-                const metadata: Record<'names' | 'types' | 'extremes' | string, any> = {};
 
-                const tsvStream = new TSVTransform({
-                    clickhouseFormat
-                });
+        const decoder = contentEncoding ? ClickhouseClient.getStreamDecoder(contentEncoding) : null;
+        const transformer = clickhouseFormat ? ClickhouseClient.getStreamTransformer(clickhouseFormat) : null;
 
-                let stream;
-                if (contentEncoding === 'gzip') {
-                    stream = body.pipe(createGunzip()).pipe(tsvStream);
-                } else if (contentEncoding === 'br') {
-                    stream = body.pipe(createBrotliDecompress()).pipe(tsvStream);
-                } else if (contentEncoding === 'deflate') {
-                    stream = body.pipe(createInflate());
-                } else {
-                    stream = body.pipe(tsvStream);
-                }
-
-                stream.on('data', function (chunk) {
-                    data.push(...chunk);
-                });
-                stream.once('meta-names', function (names) {
-                    metadata['names'] = names;
-                });
-                stream.once('meta-types', function (types) {
-                    metadata['types'] = types;
-                });
-                stream.on('meta-extra', function (extra) {
-                    Object.assign(metadata, extra);
-                });
-                stream.on('error', function (reason) {
-                    reject(reason);
-                });
-                stream.on('end', function () {
-                    const response: {
-                        data: any[];
-                        meta: MetadataItem[];
-                        rows: number;
-                        totals?: any[];
-                        extremes?: { min: any, max: any },
-                        headers: Record<string, any>;
-                    } = {
-                        data,
-                        meta: ClickhouseClient.getMetadata(metadata.names, metadata.types),
-                        rows: data.length,
-                        headers: clickhouseHeaders
-                    };
-                    if (metadata.totals) {
-                        response.totals = metadata.totals;
-                    }
-                    if (metadata.extremes) {
-                        response.extremes = metadata.extremes;
-                    }
-                    resolve(response);
-                });
-            });
+        if (!transformer) {
+            return {
+                headers: clickhouseHeaders
+            };
         }
-        if (clickhouseFormat) {
-            throw new Error(`Unsupported clickhouse format: ${clickhouseFormat}`);
-        }
-        return {
-            headers: clickhouseHeaders
-        };
+
+        const stream = decoder ? body.pipe(decoder).pipe(transformer) : body.pipe(transformer);
+
+        return await ClickhouseClient.getStreamData(stream, clickhouseHeaders);
     }
 
     async stream(request: Request) {
         const _request = ClickhouseClient.prepareRequest(request);
-        const { statusCode, headers, body } = await this.request(_request);
-        if (statusCode != 200) {
-            throw new Error(await body.text());
-        }
-        const clickhouseHeaders = Object.fromEntries(
-            Object.entries(headers).filter(function ([value]) {
-                return /^x-clickhouse*/i.test(value);
-            })
-        );
-        const clickhouseFormat = headers['x-clickhouse-format'];
-        if (clickhouseFormat === 'TabSeparated' ||
-            clickhouseFormat === 'TabSeparatedRaw' ||
-            clickhouseFormat === 'TabSeparatedWithNames' ||
-            clickhouseFormat === 'TabSeparatedWithNamesAndTypes' ||
-            clickhouseFormat === 'TSV' ||
-            clickhouseFormat === 'TSVRaw' ||
-            clickhouseFormat === 'TSVWithNames' ||
-            clickhouseFormat === 'TSVWithNamesAndTypes'
-        ) {
-            const tsvStream = new TSVTransform({
-                clickhouseFormat
-            });
+        const { headers, body } = await this.request(_request);
+
+        const clickhouseHeaders = ClickhouseClient.getClickhouseHeaders(headers);
+
+        const contentEncoding = headers['content-encoding'] as string | undefined;
+        const clickhouseFormat = headers['x-clickhouse-format'] as string | undefined;
+
+        const decoder = contentEncoding ? ClickhouseClient.getStreamDecoder(contentEncoding) : null;
+        const transformer = clickhouseFormat ? ClickhouseClient.getStreamTransformer(clickhouseFormat) : null;
+
+        if (!transformer) {
             return {
-                stream: tsvStream,
                 headers: clickhouseHeaders
             };
         }
-        if (clickhouseFormat) {
-            throw new Error(`Unsupported clickhouse format: ${clickhouseFormat}`);
-        }
+
+        const stream = decoder ? body.pipe(decoder).pipe(transformer) : body.pipe(transformer);
+
+        return {
+            stream,
+            headers: clickhouseHeaders
+        };
     }
 
     async close(): Promise<void> {
