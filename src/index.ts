@@ -6,7 +6,6 @@ import { TSVTransform } from "./streams/tsv";
 import type { Dispatcher } from 'undici';
 import type { Readable } from "stream";
 import type { IncomingHttpHeaders } from "http";
-import BodyReadable from "undici/types/readable";
 
 export const DEFAULT_DATABASE = 'default';
 

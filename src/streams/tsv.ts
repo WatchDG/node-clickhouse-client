@@ -16,7 +16,7 @@ function lastIndexOf(buffer: Buffer, value: number, start: number, end: number):
     return DOES_NOT_CONTAIN;
 }
 
-function parseColumn(column: Buffer, type?: string) {
+function parseColumn(column: Buffer, type?: string): any {
     if (type === 'Int8' ||
         type === 'Int16' ||
         type === 'Int32' ||
@@ -51,6 +51,14 @@ function parseColumn(column: Buffer, type?: string) {
     }
     if (type === 'String') {
         return column.toString();
+    }
+    const match = type?.match(/Nullable\((.*)\)/);
+    if (match) {
+        if (column.length == 2 && column.toString() === '\\N') {
+            return null;
+        }
+        const innerType = match[1];
+        return parseColumn(column, innerType);
     }
     return column.toString();
 }

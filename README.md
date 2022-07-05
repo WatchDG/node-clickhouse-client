@@ -50,3 +50,5 @@ import {ClickhouseClient} from '@watchdg/clickhouse-client';
 | Bool       | Boolean |
 | DateTime   | Date    |
 | String     | String  |
+
+* Nullable(T)

@@ -500,6 +500,42 @@ describe('clickhouse client', function () {
                         });
                     });
                 });
+                describe('nullable', function () {
+                    it('null', async function () {
+                        const clickhouseClient = new ClickhouseClient();
+                        const result = await clickhouseClient.query(`
+                        SELECT nullIf('', '') AS value
+                        FORMAT TabSeparatedWithNamesAndTypes`
+                        );
+                        expect(result).toHaveProperty('data');
+                        expect(result.rows).toBe(1);
+                        expect(result.data).toBeInstanceOf(Array);
+                        expect(result.data).toEqual(expect.arrayContaining([{ value: null }]));
+                        expect(result).toHaveProperty('meta');
+                        expect(result.meta).toBeInstanceOf(Array);
+                        expect(result.meta).toEqual(expect.arrayContaining([{
+                            name: 'value',
+                            type: 'Nullable(String)'
+                        }]));
+                    });
+                    it('not null', async function () {
+                        const clickhouseClient = new ClickhouseClient();
+                        const result = await clickhouseClient.query(`
+                        SELECT nullIf(toUInt32(10), 2) AS value
+                        FORMAT TabSeparatedWithNamesAndTypes`
+                        );
+                        expect(result).toHaveProperty('data');
+                        expect(result.rows).toBe(1);
+                        expect(result.data).toBeInstanceOf(Array);
+                        expect(result.data).toEqual(expect.arrayContaining([{ value: 10 }]));
+                        expect(result).toHaveProperty('meta');
+                        expect(result.meta).toBeInstanceOf(Array);
+                        expect(result.meta).toEqual(expect.arrayContaining([{
+                            name: 'value',
+                            type: 'Nullable(UInt32)'
+                        }]));
+                    });
+                });
             });
 
             it('insert ans select values', async function () {
