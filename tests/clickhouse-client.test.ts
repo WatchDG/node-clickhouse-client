@@ -392,6 +392,23 @@ describe('clickhouse client', function () {
                         expect(result.meta).toBeInstanceOf(Array);
                         expect(result.meta).toEqual(expect.arrayContaining([{ name: 'value', type: 'Float32' }]));
                     });
+                    it('JSON', async function () {
+                        const clickhouseClient = new ClickhouseClient();
+                        const result = await clickhouseClient.query(`
+                        SELECT '{"a": 1}'::JSON AS value
+                        FORMAT TabSeparatedWithNamesAndTypes`
+                        );
+                        expect(result).toHaveProperty('data');
+                        expect(result.rows).toBe(1);
+                        expect(result.data).toBeInstanceOf(Array);
+                        expect(result.data).toEqual(expect.arrayContaining([{ value: { a: 1 } }]));
+                        expect(result).toHaveProperty('meta');
+                        expect(result.meta).toBeInstanceOf(Array);
+                        expect(result.meta).toEqual(expect.arrayContaining([{
+                            name: 'value',
+                            type: `Object('json')`
+                        }]));
+                    });
                     describe('Float64', function () {
                         it('positive', async function () {
                             const clickhouseClient = new ClickhouseClient();
@@ -498,6 +515,38 @@ describe('clickhouse client', function () {
                                 { name: 'emptyValue', type: 'String' }
                             ]));
                         });
+                        it('back slash', async function () {
+                            const clickhouseClient = new ClickhouseClient();
+                            const result = await clickhouseClient.query(`
+                            SELECT '\\\\' AS backSlash
+                            FORMAT TabSeparatedWithNamesAndTypes`
+                            );
+                            expect(result).toHaveProperty('data');
+                            expect(result.rows).toBe(1);
+                            expect(result.data).toBeInstanceOf(Array);
+                            expect(result.data).toEqual(expect.arrayContaining([{ backSlash: '\\' }]));
+                            expect(result).toHaveProperty('meta');
+                            expect(result.meta).toBeInstanceOf(Array);
+                            expect(result.meta).toEqual(expect.arrayContaining([
+                                { name: 'backSlash', type: 'String' }
+                            ]));
+                        });
+                        it('single quote', async function () {
+                            const clickhouseClient = new ClickhouseClient();
+                            const result = await clickhouseClient.query(`
+                            SELECT '''' AS singleQuote
+                            FORMAT TabSeparatedWithNamesAndTypes`
+                            );
+                            expect(result).toHaveProperty('data');
+                            expect(result.rows).toBe(1);
+                            expect(result.data).toBeInstanceOf(Array);
+                            expect(result.data).toEqual(expect.arrayContaining([{ singleQuote: `'` }]));
+                            expect(result).toHaveProperty('meta');
+                            expect(result.meta).toBeInstanceOf(Array);
+                            expect(result.meta).toEqual(expect.arrayContaining([
+                                { name: 'singleQuote', type: 'String' }
+                            ]));
+                        });
                     });
                 });
                 describe('nullable', function () {
@@ -536,6 +585,44 @@ describe('clickhouse client', function () {
                         }]));
                     });
                 });
+                // describe('array', function () {
+                //     it('UInt32', async function () {
+                //         const clickhouseClient = new ClickhouseClient();
+                //         const result = await clickhouseClient.query(`
+                //         SELECT [toUInt32(1), toUInt32(2), toUInt32(3)] AS value
+                //         FORMAT TabSeparatedWithNamesAndTypes`
+                //         );
+                //         console.log(result);
+                //         expect(result).toHaveProperty('data');
+                //         expect(result.rows).toBe(1);
+                //         expect(result.data).toBeInstanceOf(Array);
+                //         expect(result.data).toEqual(expect.arrayContaining([{ value: [1, 2, 3] }]));
+                //         expect(result).toHaveProperty('meta');
+                //         expect(result.meta).toBeInstanceOf(Array);
+                //         expect(result.meta).toEqual(expect.arrayContaining([{
+                //             name: 'value',
+                //             type: 'Array(UInt32)'
+                //         }]));
+                //     });
+                //     it('String', async function(){
+                //         const clickhouseClient = new ClickhouseClient();
+                //         const result = await clickhouseClient.query(`
+                //         SELECT ['a', 'b\nb', 'c,c', 'd\\\'d'] AS value
+                //         FORMAT TabSeparatedWithNamesAndTypes`
+                //         );
+                //         console.log(result)
+                //         expect(result).toHaveProperty('data');
+                //         expect(result.rows).toBe(1);
+                //         expect(result.data).toBeInstanceOf(Array);
+                //         expect(result.data).toEqual(expect.arrayContaining([{ value: ['a', 'b', 'c'] }]));
+                //         expect(result).toHaveProperty('meta');
+                //         expect(result.meta).toBeInstanceOf(Array);
+                //         expect(result.meta).toEqual(expect.arrayContaining([{
+                //             name: 'value',
+                //             type: 'Array(String)'
+                //         }]));
+                //     })
+                // });
             });
 
             it('insert ans select values', async function () {

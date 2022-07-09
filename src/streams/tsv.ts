@@ -50,17 +50,26 @@ function parseColumn(column: Buffer, type?: string): any {
         return new Date(column.toString());
     }
     if (type === 'String') {
-        return column.toString();
+        return column.toString()
+            .replaceAll('\\\\', '\\')
+            .replaceAll(`\\'`, `'`);
     }
-    const match = type?.match(/Nullable\((.*)\)/);
+    if (type === `Object('json')`) {
+        return JSON.parse(column.toString());
+    }
+    const match = type?.match(/(Nullable|Array)\((.*)\)/);
     if (match) {
-        if (column.length == 2 && column.toString() === '\\N') {
-            return null;
+        const innerType = match[2];
+        if (match[1] === 'Nullable') {
+            if (column.length == 2 && column.toString() === '\\N') {
+                return null;
+            }
+            return parseColumn(column, innerType);
         }
-        const innerType = match[1];
-        return parseColumn(column, innerType);
     }
-    return column.toString();
+    return column.toString()
+        .replaceAll('\\\\', '\\')
+        .replaceAll(`\\'`, `'`);
 }
 
 function parseRow(row: Buffer[], names?: string[], types?: string[]): string[] | Record<string, any> {
