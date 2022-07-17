@@ -16,6 +16,43 @@ function lastIndexOf(buffer: Buffer, value: number, start: number, end: number):
     return DOES_NOT_CONTAIN;
 }
 
+export function parseArray(column: Buffer, type: string) {
+    if (column.length == 2) {
+        return [];
+    }
+    if (type === 'Int8' ||
+        type === 'Int16' ||
+        type === 'Int32' ||
+        type === 'UInt8' ||
+        type === 'UInt16' ||
+        type === 'UInt32' ||
+        type === 'Float32' ||
+        type === 'Float64' ||
+        type === 'Int64' ||
+        type === 'Int128' ||
+        type === 'Int256' ||
+        type === 'UInt64' ||
+        type === 'UInt128' ||
+        type === 'UInt256'
+    ) {
+        let startIndex = 1;
+        let endIndex = column.length - 1;
+        let values = [];
+        while (startIndex < endIndex) {
+            let currentIndex = startIndex + 1;
+            while (currentIndex < endIndex && column[currentIndex] != 0x2c) {
+                currentIndex++;
+            }
+            const value = column.subarray(startIndex, currentIndex);
+            const parsedValue = parseColumn(value, type);
+            values.push(parsedValue);
+            startIndex = currentIndex + 1;
+        }
+        return values;
+    }
+    throw new Error(`Unsupported parse array type: ${type}`);
+}
+
 function parseColumn(column: Buffer, type?: string): any {
     if (type === 'Int8' ||
         type === 'Int16' ||
@@ -65,6 +102,9 @@ function parseColumn(column: Buffer, type?: string): any {
                 return null;
             }
             return parseColumn(column, innerType);
+        }
+        if (match[1] === 'Array') {
+            return parseArray(column, match[2]);
         }
     }
     return column.toString()
