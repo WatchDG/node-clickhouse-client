@@ -1,4 +1,4 @@
-import { createBrotliDecompress, createGunzip, createInflate, gzip } from "zlib";
+import { createBrotliDecompress, createGunzip, createInflate } from "zlib";
 import { Client } from "undici";
 
 import { TSVTransform } from "./streams/tsv";

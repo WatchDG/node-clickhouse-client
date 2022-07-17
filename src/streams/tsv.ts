@@ -36,8 +36,8 @@ export function parseArray(column: Buffer, type: string) {
         type === 'UInt256'
     ) {
         let startIndex = 1;
-        let endIndex = column.length - 1;
-        let values = [];
+        const endIndex = column.length - 1;
+        const values = [];
         while (startIndex < endIndex) {
             let currentIndex = startIndex + 1;
             while (currentIndex < endIndex && column[currentIndex] != 0x2c) {
