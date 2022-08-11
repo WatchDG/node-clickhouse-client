@@ -78,7 +78,7 @@ describe('clickhouse client', function () {
                         '2',
                         [3, 4],
                         ['5','6'],
-                        ['7\\\'8',',]9']
+                        ['7\\'8',',]9']
                 FORMAT TabSeparated
                 `);
                     expect(result).toHaveProperty('data');
@@ -607,7 +607,7 @@ describe('clickhouse client', function () {
                     it('String', async function () {
                         const clickhouseClient = new ClickhouseClient();
                         const result = await clickhouseClient.query(`
-                            SELECT ['a', 'b\nb', 'c,c', 'd\\\'d'] AS value
+                            SELECT ['a', 'b\nb', 'c,c', 'd\\'d'] AS value
                             FORMAT TabSeparatedWithNamesAndTypes`
                         );
                         expect(result).toHaveProperty('data');

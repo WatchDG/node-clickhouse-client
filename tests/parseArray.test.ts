@@ -146,7 +146,7 @@ describe('parseArray', function () {
             expect(array).toStrictEqual(expect.arrayContaining(['a', 'b', 'c']));
         });
         it('escaped', function () {
-            const arrayString = `['7\\\'8',',]9']`;
+            const arrayString = `['7\\'8',',]9']`;
             const arrayBuffer = Buffer.from(arrayString);
             const array = parseArray(arrayBuffer, 'String');
 
