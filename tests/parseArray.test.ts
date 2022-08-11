@@ -135,4 +135,24 @@ describe('parseArray', function () {
         expect(array.length).toBe(3);
         expect(array).toStrictEqual(expect.arrayContaining([1.2, 2.3, 3.4]));
     });
+    describe("String", function () {
+        it("simple", function () {
+            const arrayString = `['a','b','c']`;
+            const arrayBuffer = Buffer.from(arrayString);
+            const array = parseArray(arrayBuffer, 'String');
+
+            expect(array).toBeInstanceOf(Array);
+            expect(array.length).toBe(3);
+            expect(array).toStrictEqual(expect.arrayContaining(['a', 'b', 'c']));
+        });
+        it('escaped', function () {
+            const arrayString = `['7\\\'8',',]9']`;
+            const arrayBuffer = Buffer.from(arrayString);
+            const array = parseArray(arrayBuffer, 'String');
+
+            expect(array).toBeInstanceOf(Array);
+            expect(array.length).toBe(2);
+            expect(array).toStrictEqual(expect.arrayContaining([`7'8`, ',]9']));
+        });
+    });
 });

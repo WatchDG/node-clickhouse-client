@@ -77,13 +77,14 @@ describe('clickhouse client', function () {
                 SELECT  1,
                         '2',
                         [3, 4],
-                        ['5','6']
+                        ['5','6'],
+                        ['7\\\'8',',]9']
                 FORMAT TabSeparated
                 `);
                     expect(result).toHaveProperty('data');
                     expect(result.rows).toBe(1);
                     expect(result.data).toBeInstanceOf(Array);
-                    expect(result.data).toEqual(expect.arrayContaining([['1', '2', '[3,4]', `['5','6']`]]));
+                    expect(result.data).toEqual(expect.arrayContaining([['1', '2', '[3,4]', `['5','6']`, `['7'8',',]9']`]]));
                 });
             });
 
@@ -603,24 +604,23 @@ describe('clickhouse client', function () {
                             type: 'Array(UInt32)'
                         }]));
                     });
-                    //     it('String', async function(){
-                    //         const clickhouseClient = new ClickhouseClient();
-                    //         const result = await clickhouseClient.query(`
-                    //         SELECT ['a', 'b\nb', 'c,c', 'd\\\'d'] AS value
-                    //         FORMAT TabSeparatedWithNamesAndTypes`
-                    //         );
-                    //         console.log(result)
-                    //         expect(result).toHaveProperty('data');
-                    //         expect(result.rows).toBe(1);
-                    //         expect(result.data).toBeInstanceOf(Array);
-                    //         expect(result.data).toEqual(expect.arrayContaining([{ value: ['a', 'b', 'c'] }]));
-                    //         expect(result).toHaveProperty('meta');
-                    //         expect(result.meta).toBeInstanceOf(Array);
-                    //         expect(result.meta).toEqual(expect.arrayContaining([{
-                    //             name: 'value',
-                    //             type: 'Array(String)'
-                    //         }]));
-                    //     })
+                    it('String', async function () {
+                        const clickhouseClient = new ClickhouseClient();
+                        const result = await clickhouseClient.query(`
+                            SELECT ['a', 'b\nb', 'c,c', 'd\\\'d'] AS value
+                            FORMAT TabSeparatedWithNamesAndTypes`
+                        );
+                        expect(result).toHaveProperty('data');
+                        expect(result.rows).toBe(1);
+                        expect(result.data).toBeInstanceOf(Array);
+                        expect(result.data).toEqual(expect.arrayContaining([{ value: ['a', 'b\nb', 'c,c', 'd\'d'] }]));
+                        expect(result).toHaveProperty('meta');
+                        expect(result.meta).toBeInstanceOf(Array);
+                        expect(result.meta).toEqual(expect.arrayContaining([{
+                            name: 'value',
+                            type: 'Array(String)'
+                        }]));
+                    });
                 });
             });
 

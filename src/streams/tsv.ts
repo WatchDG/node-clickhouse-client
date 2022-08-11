@@ -23,17 +23,17 @@ export function parseArray(column: Buffer, type: string) {
     if (type === 'Int8' ||
         type === 'Int16' ||
         type === 'Int32' ||
-        type === 'UInt8' ||
-        type === 'UInt16' ||
-        type === 'UInt32' ||
-        type === 'Float32' ||
-        type === 'Float64' ||
         type === 'Int64' ||
         type === 'Int128' ||
         type === 'Int256' ||
+        type === 'UInt8' ||
+        type === 'UInt16' ||
+        type === 'UInt32' ||
         type === 'UInt64' ||
         type === 'UInt128' ||
-        type === 'UInt256'
+        type === 'UInt256' ||
+        type === 'Float32' ||
+        type === 'Float64'
     ) {
         let startIndex = 1;
         const endIndex = column.length - 1;
@@ -47,6 +47,22 @@ export function parseArray(column: Buffer, type: string) {
             const parsedValue = parseColumn(value, type);
             values.push(parsedValue);
             startIndex = currentIndex + 1;
+        }
+        return values;
+    }
+    if (type === 'String') {
+        let startIndex = 2;
+        const endIndex = column.length - 2;
+        const values = [];
+        while (startIndex < endIndex) {
+            let currentIndex = startIndex + 1;
+            while (currentIndex < endIndex && (column[currentIndex] != 0x27 || column[currentIndex - 1] == 0x5c)) {
+                currentIndex++;
+            }
+            const value = column.subarray(startIndex, currentIndex);
+            const parsedValue = parseColumn(value, type);
+            values.push(parsedValue);
+            startIndex = currentIndex + 3;
         }
         return values;
     }
@@ -89,7 +105,8 @@ function parseColumn(column: Buffer, type?: string): any {
     if (type === 'String') {
         return column.toString()
             .replaceAll('\\\\', '\\')
-            .replaceAll(`\\'`, `'`);
+            .replaceAll(`\\'`, `'`)
+            .replaceAll('\\n', '\n');
     }
     if (type === `Object('json')`) {
         return JSON.parse(column.toString());
