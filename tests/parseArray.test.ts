@@ -155,4 +155,23 @@ describe('parseArray', function () {
             expect(array).toStrictEqual(expect.arrayContaining([`7'8`, ',]9']));
         });
     });
+    it('Bool', function (){
+        const arrayString = '[true,false]';
+        const arrayBuffer = Buffer.from(arrayString);
+        const array = parseArray(arrayBuffer, 'Bool');
+
+        expect(array).toBeInstanceOf(Array);
+        expect(array.length).toBe(2);
+        expect(array).toStrictEqual(expect.arrayContaining([true, false]));
+    });
+    it('DateTime', function(){
+        const date = new Date(Date.now());
+        const arrayString = `['${date.toISOString()}']`;
+        const arrayBuffer = Buffer.from(arrayString);
+        const array = parseArray(arrayBuffer, 'DateTime');
+
+        expect(array).toBeInstanceOf(Array);
+        expect(array.length).toBe(1);
+        expect(array).toStrictEqual(expect.arrayContaining([date]));
+    });
 });

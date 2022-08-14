@@ -20,20 +20,21 @@ export function parseArray(column: Buffer, type: string) {
     if (column.length == 2) {
         return [];
     }
-    if (type === 'Int8' ||
-        type === 'Int16' ||
-        type === 'Int32' ||
-        type === 'Int64' ||
-        type === 'Int128' ||
-        type === 'Int256' ||
-        type === 'UInt8' ||
-        type === 'UInt16' ||
-        type === 'UInt32' ||
-        type === 'UInt64' ||
-        type === 'UInt128' ||
-        type === 'UInt256' ||
-        type === 'Float32' ||
-        type === 'Float64'
+    if (type == 'Int8' ||
+        type == 'Int16' ||
+        type == 'Int32' ||
+        type == 'Int64' ||
+        type == 'Int128' ||
+        type == 'Int256' ||
+        type == 'UInt8' ||
+        type == 'UInt16' ||
+        type == 'UInt32' ||
+        type == 'UInt64' ||
+        type == 'UInt128' ||
+        type == 'UInt256' ||
+        type == 'Float32' ||
+        type == 'Float64' ||
+        type == 'Bool'
     ) {
         let startIndex = 1;
         const endIndex = column.length - 1;
@@ -50,7 +51,7 @@ export function parseArray(column: Buffer, type: string) {
         }
         return values;
     }
-    if (type === 'String') {
+    if (type == 'String' || type == 'DateTime') {
         let startIndex = 2;
         const endIndex = column.length - 2;
         const values = [];

@@ -52,3 +52,4 @@ import {ClickhouseClient} from '@watchdg/clickhouse-client';
 | String     | String  |
 
 * Nullable(T)
+* Array(T)

@@ -549,6 +549,38 @@ describe('clickhouse client', function () {
                             ]));
                         });
                     });
+                    it('DateTime', async function(){
+                        const clickhouseClient = new ClickhouseClient();
+                        const result = await clickhouseClient.query(`
+                            SELECT toDateTime('2016-06-15 23:00:00') AS value
+                            FORMAT TabSeparatedWithNamesAndTypes`
+                        );
+                        expect(result).toHaveProperty('data');
+                        expect(result.rows).toBe(1);
+                        expect(result.data).toBeInstanceOf(Array);
+                        expect(result.data).toEqual(expect.arrayContaining([{ value: new Date(2016, 5, 15, 23,0,0) }]));
+                        expect(result).toHaveProperty('meta');
+                        expect(result.meta).toBeInstanceOf(Array);
+                        expect(result.meta).toEqual(expect.arrayContaining([
+                            { name: 'value', type: 'DateTime' }
+                        ]));
+                    });
+                    it('Bool', async function(){
+                        const clickhouseClient = new ClickhouseClient();
+                        const result = await clickhouseClient.query(`
+                            SELECT True AS value
+                            FORMAT TabSeparatedWithNamesAndTypes`
+                        );
+                        expect(result).toHaveProperty('data');
+                        expect(result.rows).toBe(1);
+                        expect(result.data).toBeInstanceOf(Array);
+                        expect(result.data).toEqual(expect.arrayContaining([{ value: true }]));
+                        expect(result).toHaveProperty('meta');
+                        expect(result.meta).toBeInstanceOf(Array);
+                        expect(result.meta).toEqual(expect.arrayContaining([
+                            { name: 'value', type: 'Bool' }
+                        ]));
+                    });
                 });
                 describe('nullable', function () {
                     it('null', async function () {
