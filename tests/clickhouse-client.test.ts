@@ -549,7 +549,7 @@ describe('clickhouse client', function () {
                             ]));
                         });
                     });
-                    it('DateTime', async function(){
+                    it('DateTime', async function () {
                         const clickhouseClient = new ClickhouseClient();
                         const result = await clickhouseClient.query(`
                             SELECT toDateTime('2016-06-15 23:00:00') AS value
@@ -558,14 +558,14 @@ describe('clickhouse client', function () {
                         expect(result).toHaveProperty('data');
                         expect(result.rows).toBe(1);
                         expect(result.data).toBeInstanceOf(Array);
-                        expect(result.data).toEqual(expect.arrayContaining([{ value: new Date(2016, 5, 15, 23,0,0) }]));
+                        expect(result.data).toEqual(expect.arrayContaining([{ value: new Date(2016, 5, 15, 23, 0, 0) }]));
                         expect(result).toHaveProperty('meta');
                         expect(result.meta).toBeInstanceOf(Array);
                         expect(result.meta).toEqual(expect.arrayContaining([
                             { name: 'value', type: 'DateTime' }
                         ]));
                     });
-                    it('Bool', async function(){
+                    it('Bool', async function () {
                         const clickhouseClient = new ClickhouseClient();
                         const result = await clickhouseClient.query(`
                             SELECT True AS value
@@ -770,10 +770,10 @@ describe('clickhouse client', function () {
         describe('INSERT', function () {
             it("stream data", async function () {
                 const blob = new Blob([JSON.stringify(['a', 0])]);
-                const blobStream = blob.stream() as Readable;
+                const blobStream = blob.stream();
                 await clickhouseClient.query({
                     query: `INSERT INTO "${DATABASE}"."test_insert" ("key", "value") FORMAT JSONCompactEachRow`,
-                    data: blobStream
+                    data: Readable.from(blobStream)
                 });
                 const result = await clickhouseClient.query(`
                     SELECT *
@@ -783,7 +783,7 @@ describe('clickhouse client', function () {
             });
             it("compressed stream data: gzip", async function () {
                 const blob = new Blob([JSON.stringify(['a', 0])]);
-                const blobStream = blob.stream() as Readable;
+                const blobStream = blob.stream();
                 const compressedStream = Readable.from(blobStream).pipe(createGzip());
                 await clickhouseClient.query({
                     query: `INSERT INTO "${DATABASE}"."test_insert" ("key", "value") FORMAT JSONCompactEachRow`,
@@ -798,7 +798,7 @@ describe('clickhouse client', function () {
             });
             it("compressed stream data: br", async function () {
                 const blob = new Blob([JSON.stringify(['a', 0])]);
-                const blobStream = blob.stream() as Readable;
+                const blobStream = blob.stream();
                 const compressedStream = Readable.from(blobStream).pipe(createBrotliCompress());
                 await clickhouseClient.query({
                     query: `INSERT INTO "${DATABASE}"."test_insert" ("key", "value") FORMAT JSONCompactEachRow`,
@@ -813,7 +813,7 @@ describe('clickhouse client', function () {
             });
             it("compressed stream data: deflate", async function () {
                 const blob = new Blob([JSON.stringify(['a', 0])]);
-                const blobStream = blob.stream() as Readable;
+                const blobStream = blob.stream();
                 const compressedStream = Readable.from(blobStream).pipe(createDeflate());
                 await clickhouseClient.query({
                     query: `INSERT INTO "${DATABASE}"."test_insert" ("key", "value") FORMAT JSONCompactEachRow`,
