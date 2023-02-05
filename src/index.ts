@@ -195,7 +195,7 @@ export class ClickhouseClient {
         const requestOptions: Dispatcher.RequestOptions = {
             method: 'POST',
             path: '/',
-            headers: incomingHeaders
+            headers: incomingHeaders as any // TODO: resolve IncomingHttpHeaders
         };
         const params: Record<string, string> = Object.assign({}, this.params, request.params);
         if (request.data) {
