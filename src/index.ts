@@ -40,6 +40,7 @@ export type Metadata = MetadataItem[];
 export class ClickhouseClient {
     private readonly httpClient: Client;
     private readonly params: Record<string, string> = {};
+    private readonly options?: ClickhouseClientOptions;
 
     static getBaseUrl(options?: ClickhouseClientOptions): URL {
         const url = new URL(`http://localhost:8123`);
@@ -177,6 +178,7 @@ export class ClickhouseClient {
     }
 
     constructor(options?: ClickhouseClientOptions) {
+        this.options = options;
         const baseUrl = ClickhouseClient.getBaseUrl(options);
         this.httpClient = new Client(baseUrl);
         if (options?.params) {
@@ -190,6 +192,12 @@ export class ClickhouseClient {
         };
         if (request.compressed) {
             incomingHeaders['content-encoding'] = request.compressed;
+        }
+        if (this.options?.user) {
+            incomingHeaders['x-clickhouse-user'] = this.options.user;
+        }
+        if (this.options?.password) {
+            incomingHeaders['x-clickhouse-key'] = this.options.password;
         }
         Object.assign(incomingHeaders, request.headers);
         const requestOptions: Dispatcher.RequestOptions = {

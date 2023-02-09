@@ -9,7 +9,10 @@ describe('clickhouse client', function () {
     let clickhouseClient: ClickhouseClient;
 
     beforeAll(async function () {
-        clickhouseClient = new ClickhouseClient();
+        clickhouseClient = new ClickhouseClient({
+            user: 'new_user',
+            password: 'new_password'
+        });
         await clickhouseClient.query(`
             CREATE DATABASE IF NOT EXISTS "${DATABASE}";
         `);
@@ -50,7 +53,6 @@ describe('clickhouse client', function () {
         describe('SELECT', function () {
             describe('JSON', function () {
                 it('select', async function () {
-                    const clickhouseClient = new ClickhouseClient();
                     const result = await clickhouseClient.query(`
                 SELECT  1           AS num,
                         '2'         AS str,
@@ -72,7 +74,6 @@ describe('clickhouse client', function () {
 
             describe('TabSeparated', function () {
                 it('select', async function () {
-                    const clickhouseClient = new ClickhouseClient();
                     const result = await clickhouseClient.query(`
                 SELECT  1,
                         '2',
@@ -90,7 +91,6 @@ describe('clickhouse client', function () {
 
             describe('TabSeparatedRaw', function () {
                 it('select', async function () {
-                    const clickhouseClient = new ClickhouseClient();
                     const result = await clickhouseClient.query(`
                 SELECT  1,
                         '2',
@@ -178,9 +178,9 @@ describe('clickhouse client', function () {
                     const result = await clickhouseClient.query(`
                         SELECT number AS value
                         FROM numbers(100000)
-                        LIMIT 100000
-                        FORMAT
-                        TabSeparatedWithNames;
+                            LIMIT 100000
+                            FORMAT
+                            TabSeparatedWithNames;
                     `);
                     expect(result).toBeInstanceOf(Object);
                     expect(result).toHaveProperty('meta');
@@ -197,7 +197,6 @@ describe('clickhouse client', function () {
                 describe('select', function () {
                     describe('Int8', function () {
                         it('positive', async function () {
-                            const clickhouseClient = new ClickhouseClient();
                             const result = await clickhouseClient.query(`
                         SELECT toInt8(1) AS value
                         FORMAT TabSeparatedWithNamesAndTypes`
@@ -211,7 +210,6 @@ describe('clickhouse client', function () {
                             expect(result).toHaveProperty('meta');
                         });
                         it('negative', async function () {
-                            const clickhouseClient = new ClickhouseClient();
                             const result = await clickhouseClient.query(`
                         SELECT toInt8(-1) AS value
                         FORMAT TabSeparatedWithNamesAndTypes`
@@ -226,7 +224,6 @@ describe('clickhouse client', function () {
                         });
                     });
                     it('Int16', async function () {
-                        const clickhouseClient = new ClickhouseClient();
                         const result = await clickhouseClient.query(`
                         SELECT toInt16(1) AS value
                         FORMAT TabSeparatedWithNamesAndTypes`
@@ -240,7 +237,6 @@ describe('clickhouse client', function () {
                         expect(result.meta).toEqual(expect.arrayContaining([{ name: 'value', type: 'Int16' }]));
                     });
                     it('Int32', async function () {
-                        const clickhouseClient = new ClickhouseClient();
                         const result = await clickhouseClient.query(`
                         SELECT toInt32(1) AS value
                         FORMAT TabSeparatedWithNamesAndTypes`
@@ -254,7 +250,6 @@ describe('clickhouse client', function () {
                         expect(result.meta).toEqual(expect.arrayContaining([{ name: 'value', type: 'Int32' }]));
                     });
                     it('Int64', async function () {
-                        const clickhouseClient = new ClickhouseClient();
                         const result = await clickhouseClient.query(`
                         SELECT toInt64(1) AS value
                         FORMAT TabSeparatedWithNamesAndTypes`
@@ -268,7 +263,6 @@ describe('clickhouse client', function () {
                         expect(result.meta).toEqual(expect.arrayContaining([{ name: 'value', type: 'Int64' }]));
                     });
                     it('Int128', async function () {
-                        const clickhouseClient = new ClickhouseClient();
                         const result = await clickhouseClient.query(`
                         SELECT toInt128(1) AS value
                         FORMAT TabSeparatedWithNamesAndTypes`
@@ -282,7 +276,6 @@ describe('clickhouse client', function () {
                         expect(result.meta).toEqual(expect.arrayContaining([{ name: 'value', type: 'Int128' }]));
                     });
                     it('Int256', async function () {
-                        const clickhouseClient = new ClickhouseClient();
                         const result = await clickhouseClient.query(`
                         SELECT toInt256(1) AS value
                         FORMAT TabSeparatedWithNamesAndTypes`
@@ -296,7 +289,6 @@ describe('clickhouse client', function () {
                         expect(result.meta).toEqual(expect.arrayContaining([{ name: 'value', type: 'Int256' }]));
                     });
                     it('UInt8', async function () {
-                        const clickhouseClient = new ClickhouseClient();
                         const result = await clickhouseClient.query(`
                         SELECT toUInt8(1) AS value
                         FORMAT TabSeparatedWithNamesAndTypes`
@@ -310,7 +302,6 @@ describe('clickhouse client', function () {
                         expect(result.meta).toEqual(expect.arrayContaining([{ name: 'value', type: 'UInt8' }]));
                     });
                     it('UInt16', async function () {
-                        const clickhouseClient = new ClickhouseClient();
                         const result = await clickhouseClient.query(`
                         SELECT toUInt16(1) AS value
                         FORMAT TabSeparatedWithNamesAndTypes`
@@ -324,7 +315,6 @@ describe('clickhouse client', function () {
                         expect(result.meta).toEqual(expect.arrayContaining([{ name: 'value', type: 'UInt16' }]));
                     });
                     it('UInt32', async function () {
-                        const clickhouseClient = new ClickhouseClient();
                         const result = await clickhouseClient.query(`
                         SELECT toUInt32(1) AS value
                         FORMAT TabSeparatedWithNamesAndTypes`
@@ -338,7 +328,6 @@ describe('clickhouse client', function () {
                         expect(result.meta).toEqual(expect.arrayContaining([{ name: 'value', type: 'UInt32' }]));
                     });
                     it('UInt64', async function () {
-                        const clickhouseClient = new ClickhouseClient();
                         const result = await clickhouseClient.query(`
                         SELECT toUInt64(1) AS value
                         FORMAT TabSeparatedWithNamesAndTypes`
@@ -352,7 +341,6 @@ describe('clickhouse client', function () {
                         expect(result.meta).toEqual(expect.arrayContaining([{ name: 'value', type: 'UInt64' }]));
                     });
                     it('UInt128', async function () {
-                        const clickhouseClient = new ClickhouseClient();
                         const result = await clickhouseClient.query(`
                         SELECT toUInt128(1) AS value
                         FORMAT TabSeparatedWithNamesAndTypes`
@@ -366,7 +354,6 @@ describe('clickhouse client', function () {
                         expect(result.meta).toEqual(expect.arrayContaining([{ name: 'value', type: 'UInt128' }]));
                     });
                     it('UInt256', async function () {
-                        const clickhouseClient = new ClickhouseClient();
                         const result = await clickhouseClient.query(`
                         SELECT toUInt256(1) AS value
                         FORMAT TabSeparatedWithNamesAndTypes`
@@ -380,7 +367,6 @@ describe('clickhouse client', function () {
                         expect(result.meta).toEqual(expect.arrayContaining([{ name: 'value', type: 'UInt256' }]));
                     });
                     it('Float32', async function () {
-                        const clickhouseClient = new ClickhouseClient();
                         const result = await clickhouseClient.query(`
                         SELECT toFloat32(1.2) AS value
                         FORMAT TabSeparatedWithNamesAndTypes`
@@ -393,8 +379,7 @@ describe('clickhouse client', function () {
                         expect(result.meta).toBeInstanceOf(Array);
                         expect(result.meta).toEqual(expect.arrayContaining([{ name: 'value', type: 'Float32' }]));
                     });
-                    it('JSON', async function () {
-                        const clickhouseClient = new ClickhouseClient();
+                    it.skip('JSON', async function () { // TODO: set setting allow_experimental_object_type = 1
                         const result = await clickhouseClient.query(`
                         SELECT '{"a": 1}'::JSON AS value
                         FORMAT TabSeparatedWithNamesAndTypes`
@@ -412,7 +397,6 @@ describe('clickhouse client', function () {
                     });
                     describe('Float64', function () {
                         it('positive', async function () {
-                            const clickhouseClient = new ClickhouseClient();
                             const result = await clickhouseClient.query(`
                         SELECT toFloat64(1.2) AS value
                         FORMAT TabSeparatedWithNamesAndTypes`
@@ -426,7 +410,6 @@ describe('clickhouse client', function () {
                             expect(result.meta).toEqual(expect.arrayContaining([{ name: 'value', type: 'Float64' }]));
                         });
                         it('negative', async function () {
-                            const clickhouseClient = new ClickhouseClient();
                             const result = await clickhouseClient.query(`
                         SELECT toFloat64(-1.2) AS value
                         FORMAT TabSeparatedWithNamesAndTypes`
@@ -440,7 +423,6 @@ describe('clickhouse client', function () {
                             expect(result.meta).toEqual(expect.arrayContaining([{ name: 'value', type: 'Float64' }]));
                         });
                         it('NaN', async function () {
-                            const clickhouseClient = new ClickhouseClient();
                             const result = await clickhouseClient.query(`
                         SELECT toFloat64(nan) AS value
                         FORMAT TabSeparatedWithNamesAndTypes`
@@ -454,7 +436,6 @@ describe('clickhouse client', function () {
                             expect(result.meta).toEqual(expect.arrayContaining([{ name: 'value', type: 'Float64' }]));
                         });
                         it('positive Infinity', async function () {
-                            const clickhouseClient = new ClickhouseClient();
                             const result = await clickhouseClient.query(`
                         SELECT inf AS value
                         FORMAT TabSeparatedWithNamesAndTypes`
@@ -468,7 +449,6 @@ describe('clickhouse client', function () {
                             expect(result.meta).toEqual(expect.arrayContaining([{ name: 'value', type: 'Float64' }]));
                         });
                         it('negative Infinity', async function () {
-                            const clickhouseClient = new ClickhouseClient();
                             const result = await clickhouseClient.query(`
                         SELECT -inf AS value
                         FORMAT TabSeparatedWithNamesAndTypes`
@@ -484,7 +464,6 @@ describe('clickhouse client', function () {
                     });
                     describe('String', function () {
                         it('empty', async function () {
-                            const clickhouseClient = new ClickhouseClient();
                             const result = await clickhouseClient.query(`
                             SELECT '' AS emptyValue
                             FORMAT TabSeparatedWithNamesAndTypes`
@@ -500,7 +479,6 @@ describe('clickhouse client', function () {
                             ]));
                         });
                         it('empty 2', async function () {
-                            const clickhouseClient = new ClickhouseClient();
                             const result = await clickhouseClient.query(`
                             SELECT 'a' AS value, '' AS emptyValue
                             FORMAT TabSeparatedWithNamesAndTypes`
@@ -517,7 +495,6 @@ describe('clickhouse client', function () {
                             ]));
                         });
                         it('back slash', async function () {
-                            const clickhouseClient = new ClickhouseClient();
                             const result = await clickhouseClient.query(`
                             SELECT '\\\\' AS backSlash
                             FORMAT TabSeparatedWithNamesAndTypes`
@@ -533,7 +510,6 @@ describe('clickhouse client', function () {
                             ]));
                         });
                         it('single quote', async function () {
-                            const clickhouseClient = new ClickhouseClient();
                             const result = await clickhouseClient.query(`
                             SELECT '''' AS singleQuote
                             FORMAT TabSeparatedWithNamesAndTypes`
@@ -550,7 +526,6 @@ describe('clickhouse client', function () {
                         });
                     });
                     it('DateTime', async function () {
-                        const clickhouseClient = new ClickhouseClient();
                         const result = await clickhouseClient.query(`
                             SELECT toDateTime('2016-06-15 23:00:00') AS value
                             FORMAT TabSeparatedWithNamesAndTypes`
@@ -566,7 +541,6 @@ describe('clickhouse client', function () {
                         ]));
                     });
                     it('Bool', async function () {
-                        const clickhouseClient = new ClickhouseClient();
                         const result = await clickhouseClient.query(`
                             SELECT True AS value
                             FORMAT TabSeparatedWithNamesAndTypes`
@@ -584,7 +558,6 @@ describe('clickhouse client', function () {
                 });
                 describe('nullable', function () {
                     it('null', async function () {
-                        const clickhouseClient = new ClickhouseClient();
                         const result = await clickhouseClient.query(`
                         SELECT nullIf('', '') AS value
                         FORMAT TabSeparatedWithNamesAndTypes`
@@ -601,7 +574,6 @@ describe('clickhouse client', function () {
                         }]));
                     });
                     it('not null', async function () {
-                        const clickhouseClient = new ClickhouseClient();
                         const result = await clickhouseClient.query(`
                         SELECT nullIf(toUInt32(10), 2) AS value
                         FORMAT TabSeparatedWithNamesAndTypes`
@@ -620,7 +592,6 @@ describe('clickhouse client', function () {
                 });
                 describe('array', function () {
                     it('UInt32', async function () {
-                        const clickhouseClient = new ClickhouseClient();
                         const result = await clickhouseClient.query(`
                         SELECT [toUInt32(1), toUInt32(2), toUInt32(3)] AS value
                         FORMAT TabSeparatedWithNamesAndTypes`
@@ -637,7 +608,6 @@ describe('clickhouse client', function () {
                         }]));
                     });
                     it('String', async function () {
-                        const clickhouseClient = new ClickhouseClient();
                         const result = await clickhouseClient.query(`
                             SELECT ['a', 'b\nb', 'c,c', 'd\\'d'] AS value
                             FORMAT TabSeparatedWithNamesAndTypes`
@@ -665,8 +635,7 @@ describe('clickhouse client', function () {
                 `);
                 const result = await clickhouseClient.query(`
                     SELECT *
-                    FROM "${DATABASE}"."test_insert"
-                        FORMAT TSVWithNamesAndTypes;
+                    FROM "${DATABASE}"."test_insert" FORMAT TSVWithNamesAndTypes;
                 `);
                 expect(result).toBeInstanceOf(Object);
                 expect(result).toHaveProperty('meta');
@@ -688,9 +657,9 @@ describe('clickhouse client', function () {
                     SELECT *
                     FROM "${DATABASE}"."test_insert"
                     ORDER BY time
-                    LIMIT 1
-                    FORMAT
-                    TSVWithNamesAndTypes;
+                        LIMIT 1
+                        FORMAT
+                        TSVWithNamesAndTypes;
                 `);
                 expect(result).toBeInstanceOf(Object);
                 expect(result).toHaveProperty('meta');

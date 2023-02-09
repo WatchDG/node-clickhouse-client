@@ -6,7 +6,10 @@ describe('clickhouse client params', function () {
     let clickhouseClient: ClickhouseClient;
 
     beforeAll(async function () {
-        clickhouseClient = new ClickhouseClient();
+        clickhouseClient = new ClickhouseClient({
+            user: 'new_user',
+            password: 'new_password'
+        });
         await clickhouseClient.query(`
             CREATE DATABASE IF NOT EXISTS "${DATABASE}";
         `);

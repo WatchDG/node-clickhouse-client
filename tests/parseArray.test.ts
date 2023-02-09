@@ -155,7 +155,7 @@ describe('parseArray', function () {
             expect(array).toStrictEqual(expect.arrayContaining([`7'8`, ',]9']));
         });
     });
-    it('Bool', function (){
+    it('Bool', function () {
         const arrayString = '[true,false]';
         const arrayBuffer = Buffer.from(arrayString);
         const array = parseArray(arrayBuffer, 'Bool');
@@ -164,7 +164,7 @@ describe('parseArray', function () {
         expect(array.length).toBe(2);
         expect(array).toStrictEqual(expect.arrayContaining([true, false]));
     });
-    it('DateTime', function(){
+    it('DateTime', function () {
         const date = new Date(Date.now());
         const arrayString = `['${date.toISOString()}']`;
         const arrayBuffer = Buffer.from(arrayString);
