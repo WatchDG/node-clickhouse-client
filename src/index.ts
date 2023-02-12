@@ -9,7 +9,7 @@ import type { IncomingHttpHeaders } from "http";
 
 export const DEFAULT_DATABASE = 'default';
 
-export type ClickhouseParams = 'extremes' | 'enable_http_compression' | string;
+export type ClickhouseParams = 'extremes' | 'enable_http_compression' | 'allow_experimental_object_type' | string;
 
 export interface ClickhouseClientOptions {
     protocol?: 'http' | 'https';
@@ -49,12 +49,6 @@ export class ClickhouseClient {
         }
         if (options.protocol) {
             url.protocol = options.protocol;
-        }
-        if (options.user) {
-            url.username = options.user;
-        }
-        if (options.password) {
-            url.password = options.password;
         }
         if (options.host) {
             url.host = options.host;

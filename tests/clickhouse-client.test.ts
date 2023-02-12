@@ -379,10 +379,13 @@ describe('clickhouse client', function () {
                         expect(result.meta).toBeInstanceOf(Array);
                         expect(result.meta).toEqual(expect.arrayContaining([{ name: 'value', type: 'Float32' }]));
                     });
-                    it.skip('JSON', async function () { // TODO: set setting allow_experimental_object_type = 1
-                        const result = await clickhouseClient.query(`
-                        SELECT '{"a": 1}'::JSON AS value
-                        FORMAT TabSeparatedWithNamesAndTypes`
+                    it('JSON', async function () {
+                        const result = await clickhouseClient.query({
+                                query: `SELECT '{"a": 1}'::JSON AS value FORMAT TabSeparatedWithNamesAndTypes`,
+                                params: {
+                                    allow_experimental_object_type: '1'
+                                }
+                            }
                         );
                         expect(result).toHaveProperty('data');
                         expect(result.rows).toBe(1);
