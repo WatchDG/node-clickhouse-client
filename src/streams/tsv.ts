@@ -109,6 +109,9 @@ function parseColumn(column: Buffer, type?: string): any {
             .replaceAll(`\\'`, `'`)
             .replaceAll('\\n', '\n');
     }
+    if (type === 'UUID') {
+        return column.toString();
+    }
     if (type === `Object('json')`) {
         return JSON.parse(column.toString());
     }

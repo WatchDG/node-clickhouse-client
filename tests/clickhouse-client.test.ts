@@ -70,9 +70,22 @@ describe('clickhouse client', function () {
                         strArr: ['5', '6']
                     }]));
                 });
+                it('UUID', async function () {
+                    const result = await clickhouseClient.query(`
+                        SELECT toUUIDOrZero('') as value
+                        FORMAT JSON
+                    `);
+                    expect(result).toHaveProperty('data');
+                    expect(result.rows).toBe(1);
+                    expect(result.data).toBeInstanceOf(Array);
+                    expect(result.data).toEqual(expect.arrayContaining([{
+                        value: '00000000-0000-0000-0000-000000000000'
+                    }]));
+                });
             });
 
             describe('TabSeparated', function () {
+                const format = 'TabSeparated';
                 it('select', async function () {
                     const result = await clickhouseClient.query(`
                 SELECT  1,
@@ -87,9 +100,20 @@ describe('clickhouse client', function () {
                     expect(result.data).toBeInstanceOf(Array);
                     expect(result.data).toEqual(expect.arrayContaining([['1', '2', '[3,4]', `['5','6']`, `['7'8',',]9']`]]));
                 });
+                it('UUID', async function () {
+                    const result = await clickhouseClient.query(`
+                        SELECT toUUIDOrZero('') as value
+                        FORMAT ${format}
+                    `);
+                    expect(result).toHaveProperty('data');
+                    expect(result.rows).toBe(1);
+                    expect(result.data).toBeInstanceOf(Array);
+                    expect(result.data).toEqual(expect.arrayContaining([['00000000-0000-0000-0000-000000000000']]));
+                });
             });
 
             describe('TabSeparatedRaw', function () {
+                const format = 'TabSeparatedRaw';
                 it('select', async function () {
                     const result = await clickhouseClient.query(`
                 SELECT  1,
@@ -103,9 +127,20 @@ describe('clickhouse client', function () {
                     expect(result.data).toBeInstanceOf(Array);
                     expect(result.data).toEqual(expect.arrayContaining([['1', '2', '[3,4]', `['5','6']`]]));
                 });
+                it('UUID', async function () {
+                    const result = await clickhouseClient.query(`
+                        SELECT toUUIDOrZero('') as value
+                        FORMAT ${format}
+                    `);
+                    expect(result).toHaveProperty('data');
+                    expect(result.rows).toBe(1);
+                    expect(result.data).toBeInstanceOf(Array);
+                    expect(result.data).toEqual(expect.arrayContaining([['00000000-0000-0000-0000-000000000000']]));
+                });
             });
 
             describe('TabSeparatedWithNames', function () {
+                const format = 'TabSeparatedWithNames';
                 describe('select', function () {
                     it('Int8', async function () {
                         const result = await clickhouseClient.query(`
@@ -191,9 +226,22 @@ describe('clickhouse client', function () {
                     expect(result.data).toBeInstanceOf(Array);
                     expect(result.data.length).toBe(result.rows);
                 });
+                it('UUID', async function () {
+                    const result = await clickhouseClient.query(`
+                        SELECT toUUIDOrZero('') as value
+                        FORMAT ${format}
+                    `);
+                    expect(result).toHaveProperty('data');
+                    expect(result.rows).toBe(1);
+                    expect(result.data).toBeInstanceOf(Array);
+                    expect(result.data).toEqual(expect.arrayContaining([
+                        { value: '00000000-0000-0000-0000-000000000000' }
+                    ]));
+                });
             });
 
             describe('TabSeparatedWithNamesAndTypes', function () {
+                const format = 'TabSeparatedWithNamesAndTypes';
                 describe('select', function () {
                     describe('Int8', function () {
                         it('positive', async function () {
@@ -626,6 +674,24 @@ describe('clickhouse client', function () {
                             type: 'Array(String)'
                         }]));
                     });
+                });
+                it('UUID', async function () {
+                    const result = await clickhouseClient.query(`
+                        SELECT toUUIDOrZero('') as value
+                        FORMAT ${format}
+                    `);
+                    expect(result).toHaveProperty('rows');
+                    expect(result.rows).toBe(1);
+                    expect(result).toHaveProperty('meta');
+                    expect(result.meta).toBeInstanceOf(Array);
+                    expect(result.meta).toEqual(expect.arrayContaining([
+                        { name: 'value', type: 'UUID' }
+                    ]));
+                    expect(result).toHaveProperty('data');
+                    expect(result.data).toBeInstanceOf(Array);
+                    expect(result.data).toEqual(expect.arrayContaining([
+                        { value: '00000000-0000-0000-0000-000000000000' }
+                    ]));
                 });
             });
 
