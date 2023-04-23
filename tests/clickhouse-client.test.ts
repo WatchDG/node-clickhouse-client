@@ -693,6 +693,42 @@ describe('clickhouse client', function () {
                         { value: '00000000-0000-0000-0000-000000000000' }
                     ]));
                 });
+                it('IPv4', async function(){
+                    const result = await clickhouseClient.query(`
+                        SELECT '0.0.0.0'::IPv4 as value
+                        FORMAT ${format}
+                    `);
+                    expect(result).toHaveProperty('rows');
+                    expect(result.rows).toBe(1);
+                    expect(result).toHaveProperty('meta');
+                    expect(result.meta).toBeInstanceOf(Array);
+                    expect(result.meta).toEqual(expect.arrayContaining([
+                        { name: 'value', type: 'IPv4' }
+                    ]));
+                    expect(result).toHaveProperty('data');
+                    expect(result.data).toBeInstanceOf(Array);
+                    expect(result.data).toEqual(expect.arrayContaining([
+                        { value: '0.0.0.0' }
+                    ]));
+                });
+                it('IPv6', async function(){
+                    const result = await clickhouseClient.query(`
+                        SELECT '::'::IPv6 as value
+                        FORMAT ${format}
+                    `);
+                    expect(result).toHaveProperty('rows');
+                    expect(result.rows).toBe(1);
+                    expect(result).toHaveProperty('meta');
+                    expect(result.meta).toBeInstanceOf(Array);
+                    expect(result.meta).toEqual(expect.arrayContaining([
+                        { name: 'value', type: 'IPv6' }
+                    ]));
+                    expect(result).toHaveProperty('data');
+                    expect(result.data).toBeInstanceOf(Array);
+                    expect(result.data).toEqual(expect.arrayContaining([
+                        { value: '::' }
+                    ]));
+                });
             });
 
             it('insert ans select values', async function () {

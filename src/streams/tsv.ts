@@ -112,6 +112,12 @@ function parseColumn(column: Buffer, type?: string): any {
     if (type === 'UUID') {
         return column.toString();
     }
+    if (type == 'IPv4') {
+        return column.toString();
+    }
+    if (type == 'IPv6') {
+        return column.toString();
+    }
     if (type === `Object('json')`) {
         return JSON.parse(column.toString());
     }

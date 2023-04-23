@@ -51,6 +51,8 @@ import {ClickhouseClient} from '@watchdg/clickhouse-client';
 | DateTime   | Date    |
 | String     | String  |
 | UUID       | String  |
+| IPv4       | String  |
+| IPv6       | String  |
 
 * Nullable(T)
 * Array(T)
